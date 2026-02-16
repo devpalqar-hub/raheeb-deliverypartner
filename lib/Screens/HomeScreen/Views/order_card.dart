@@ -52,8 +52,8 @@ class OrderCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      fontSize: 16,
+                    style:  TextStyle(
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -70,14 +70,14 @@ class OrderCard extends StatelessWidget {
 
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
+                  horizontal: 10,
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
                   color: status == "ASSIGNED"
                       ? Colors.blue.shade50
                       : Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   status,

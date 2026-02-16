@@ -1,31 +1,49 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:get/get_navigation/src/root/get_material_app.dart';
-
-import 'package:raheeb_deliverypartner/Screens/HomeScreen/home_screen.dart';
+import 'package:get/get.dart';
+import 'package:raheeb_deliverypartner/Screens/LoginScreen/Service/LoginController.dart';
 
 
 
 void main() {
-  runApp(const RaheebDelivery(initialHome: HomeScreen()));
+  runApp(const RaheebDelivery());
 }
 
 class RaheebDelivery extends StatelessWidget {
-   final Widget initialHome;
-  const RaheebDelivery({super.key,required this.initialHome});
+  const RaheebDelivery({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+
+    final auth = Get.put(AuthController());
+
     return ScreenUtilInit(
-      designSize:  Size(400, 850),
+      designSize: const Size(400, 850),
       minTextAdapt: true,
       splitScreenMode: true,
-      builder: (_, __) => GetMaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: initialHome,
-      ),
+      builder: (_, __) {
+
+        return FutureBuilder(
+          future: auth.checkLogin(),
+          builder: (context, snapshot) {
+
+            if (!snapshot.hasData) {
+              return const MaterialApp(
+                home: Scaffold(
+                  body: Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+              );
+            }
+
+            return GetMaterialApp(
+              debugShowCheckedModeBanner: false,
+              home: snapshot.data as Widget,
+            );
+          },
+        );
+      },
     );
-    
   }
 }

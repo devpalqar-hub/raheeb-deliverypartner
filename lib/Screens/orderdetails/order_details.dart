@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:raheeb_deliverypartner/Screens/HomeScreen/Model/OrderModel.dart';
+import 'package:raheeb_deliverypartner/Screens/TransferScreen/TransferScreen.dart';
 
 class OrderDetailsScreen extends StatelessWidget {
-  final Map<String, dynamic> order;
+  final OrderModel order;
 
   const OrderDetailsScreen({super.key, required this.order});
 
@@ -10,29 +13,20 @@ class OrderDetailsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        title: Text("Order ${order["orderId"]}"),
+        title: Text("Order ${order.orderNumber}"),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-
             _buildTrackingCard(),
-
             const SizedBox(height: 16),
-
             _buildCustomerCard(),
-
             const SizedBox(height: 16),
-
             _buildNextStepCard(),
-
             const SizedBox(height: 16),
-
             _buildOrderSummaryCard(),
-
             const SizedBox(height: 16),
-
             _buildIssueCard(),
           ],
         ),
@@ -40,56 +34,66 @@ class OrderDetailsScreen extends StatelessWidget {
     );
   }
 
-
+  /// ================= TRACKING =================
   Widget _buildTrackingCard() {
+    final status = order.trackingStatus;
+
     return _cardContainer(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text(
+        children: [
+          const Text(
             "TRACKING STATUS",
             style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey,
-              fontWeight: FontWeight.bold,
-            ),
+                fontSize: 12,
+                color: Colors.grey,
+                fontWeight: FontWeight.bold),
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
 
-          TrackingItem(title: "Order Picked Up", active: true),
-          TrackingItem(title: "In Transit", active: true),
-          TrackingItem(title: "Out for Delivery", active: false),
-          TrackingItem(title: "Delivered", active: false),
+          TrackingItem(
+              title: "Order Picked Up",
+              active: status != null),
+          TrackingItem(
+              title: "In Transit",
+              active: status == "in_transit" ||
+                  status == "out_for_delivery"),
+          TrackingItem(
+              title: "Out for Delivery",
+              active: status == "out_for_delivery"),
+          TrackingItem(
+              title: "Delivered",
+              active: status == "delivered"),
         ],
       ),
     );
   }
 
+  /// ================= CUSTOMER =================
   Widget _buildCustomerCard() {
     return _cardContainer(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
           Row(
-            children: const [
-              CircleAvatar(
+            children: [
+              const CircleAvatar(
                 radius: 22,
-                backgroundImage: NetworkImage(
-                    "https://i.pravatar.cc/100"),
+                backgroundImage:
+                    NetworkImage("https://i.pravatar.cc/100"),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  "Jane Doe",
-                  style: TextStyle(
+                  order.customerName,
+                  style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16),
                 ),
               ),
-              Icon(Icons.chat, color: Colors.blue),
-              SizedBox(width: 12),
-              Icon(Icons.call, color: Colors.blue),
+              const Icon(Icons.chat, color: Colors.blue),
+              const SizedBox(width: 12),
+              const Icon(Icons.call, color: Colors.blue),
             ],
           ),
 
@@ -102,85 +106,77 @@ class OrderDetailsScreen extends StatelessWidget {
                 color: Colors.grey,
                 fontWeight: FontWeight.bold),
           ),
-
           const SizedBox(height: 6),
 
-          const Text(
-            "123 Main St, Apt 4B\nSpringfield, IL 62704",
+          Text(
+            "${order.address},\n${order.city}, ${order.postalCode}",
           ),
         ],
       ),
     );
   }
 
-
+  /// ================= NEXT STEP =================
   Widget _buildNextStepCard() {
-    return Column(
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        ),
+        onPressed: () {},
+        child: const Text("Mark as Delivered"),
+      ),
+    );
+  }
+
+  /// ================= ORDER SUMMARY =================
+  Widget _buildOrderSummaryCard() {
+  return _cardContainer(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30)),
+
+        const Text(
+          "ORDER SUMMARY",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+
+        const SizedBox(height: 16),
+
+        /// SINGLE ITEM (as per model)
+        _SummaryRow(
+          order.productName,
+          "Qty ${order.quantity}",
+        ),
+
+        const SizedBox(height: 12),
+        const Divider(),
+        const SizedBox(height: 8),
+
+        Row(
+          mainAxisAlignment:
+              MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              "Total (Paid)",
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            onPressed: () {},
-            child: const Text("Mark as Delivered"),
-          ),
+            Text(
+              "₹${order.totalAmount}",
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold),
+            ),
+          ],
         ),
       ],
-    );
-  }
+    ),
+  );
+}
 
-
-  Widget _buildOrderSummaryCard() {
-    return _cardContainer(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "ORDER SUMMARY",
-                style: TextStyle(
-                    fontWeight: FontWeight.bold),
-              ),
-              Text("3 items"),
-            ],
-          ),
-
-          SizedBox(height: 16),
-
-          _SummaryRow("Large Pepperoni Pizza", "\$32.00"),
-          _SummaryRow("Coke Zero (500ml)", "\$2.50"),
-
-          SizedBox(height: 12),
-          Divider(),
-          SizedBox(height: 8),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "Total (Paid)",
-                style: TextStyle(
-                    fontWeight: FontWeight.bold),
-              ),
-              Text(
-                "\$34.50",
-                style: TextStyle(
-                    fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-
+  /// ================= ISSUE =================
   Widget _buildIssueCard() {
     return _cardContainer(
       child: Column(
@@ -193,18 +189,18 @@ class OrderDetailsScreen extends StatelessWidget {
               SizedBox(width: 8),
               Text(
                 "Issues with delivery?",
-                style: TextStyle(
-                    fontWeight: FontWeight.bold),
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ],
           ),
           const SizedBox(height: 8),
           const Text(
-            "If you can’t complete this order due to vehicle issues or emergency, you can transfer it.",
-          ),
+              "If you can’t complete this order due to vehicle issues or emergency, you can transfer it."),
           const SizedBox(height: 12),
           TextButton(
-            onPressed: () {},
+            onPressed: () {
+              Get.to(() => const TransferOrderScreen());
+            },
             child: const Text("Transfer Order"),
           )
         ],
@@ -212,58 +208,55 @@ class OrderDetailsScreen extends StatelessWidget {
     );
   }
 
-
+  /// ================= CARD CONTAINER =================
   Widget _cardContainer({required Widget child}) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16)),
       child: child,
     );
   }
 }
 
-
+/// ================= TRACKING ITEM =================
 class TrackingItem extends StatelessWidget {
   final String title;
   final bool active;
 
-  const TrackingItem({
-    super.key,
-    required this.title,
-    required this.active,
-  });
+  const TrackingItem(
+      {super.key, required this.title, required this.active});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 18,
-          height: 18,
-          decoration: BoxDecoration(
-            color: active
-                ? Colors.blue
-                : Colors.grey.shade300,
-            shape: BoxShape.circle,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        children: [
+          Container(
+            width: 18,
+            height: 18,
+            decoration: BoxDecoration(
+              color:
+                  active ? Colors.blue : Colors.grey.shade300,
+              shape: BoxShape.circle,
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Text(
-          title,
-          style: TextStyle(
-            fontWeight:
-            active ? FontWeight.bold : FontWeight.normal,
+          const SizedBox(width: 12),
+          Text(
+            title,
+            style: TextStyle(
+                fontWeight:
+                    active ? FontWeight.bold : FontWeight.normal),
           ),
-        ),
-        const SizedBox(height: 16),
-      ],
+        ],
+      ),
     );
   }
 }
 
+/// ================= SUMMARY ROW =================
 class _SummaryRow extends StatelessWidget {
   final String title;
   final String price;
@@ -276,7 +269,7 @@ class _SummaryRow extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         mainAxisAlignment:
-        MainAxisAlignment.spaceBetween,
+            MainAxisAlignment.spaceBetween,
         children: [
           Text(title),
           Text(price),
