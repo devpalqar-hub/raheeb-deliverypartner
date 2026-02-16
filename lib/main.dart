@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
-import 'package:raheeb_deliverypartner/Screens/DashBoard/DashBoard.dart';
+
 import 'package:raheeb_deliverypartner/Screens/HomeScreen/home_screen.dart';
 
 
 
 void main() {
-  runApp(const RaheebDelivery(initialHome: MainScreen()));
+  runApp(const RaheebDelivery(initialHome: HomeScreen()));
 }
 
 class RaheebDelivery extends StatelessWidget {

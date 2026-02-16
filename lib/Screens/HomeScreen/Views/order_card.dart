@@ -193,25 +193,33 @@ class OrderCard extends StatelessWidget {
                   ),
                 ],
               ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isAssigned
-                      ? Colors.blue
-                      : Colors.grey.shade200,
-                  foregroundColor: isAssigned
-                      ? Colors.white
-                      : Colors.black,
-                  shape: RoundedRectangleBorder(
-                    borderRadius:
-                    BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12),
-                ),
-                onPressed: onPressed,
-                child: Text(buttonText),
-              )
+             ElevatedButton(
+  style: ElevatedButton.styleFrom(
+    backgroundColor:
+        isAssigned ? Colors.blue : Colors.grey.shade200,
+    foregroundColor:
+        isAssigned ? Colors.white : Colors.black,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+    ),
+    padding: const EdgeInsets.symmetric(
+      horizontal: 20,
+      vertical: 12,
+    ),
+  ),
+  onPressed: onPressed,
+  child: Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text(buttonText),
+      const SizedBox(width: 6),
+      const Icon(
+        Icons.arrow_forward,
+        size: 14,
+      ),
+    ],
+  ),
+)
             ],
           )
         ],
