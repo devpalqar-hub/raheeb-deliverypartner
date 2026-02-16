@@ -5,6 +5,7 @@ import 'package:get/get_navigation/src/extension_navigation.dart';
 import 'package:raheeb_deliverypartner/Screens/HomeScreen/Views/order_card.dart';
 import 'package:raheeb_deliverypartner/Screens/HomeScreen/Views/returnorder_card.dart';
 import 'package:raheeb_deliverypartner/Screens/TransferScreen/TransferScreen.dart';
+import 'package:raheeb_deliverypartner/Screens/orderdetails/order_details.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,7 +16,37 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
 
-  int selectedTab = 0; // 0 = Assigned, 1 = Return
+  int selectedTab = 0;
+  
+  final List<Map<String, dynamic>> orders = [
+      {
+        "title": "Burger King",
+        "orderId": "#OD-4923",
+        "branch": "Downtown Branch",
+        "pickup": "124 Main Street, West Side",
+        "delivery": "Apartment 4B, 892 Broadway",
+        "earning": "\$8.50",
+        "status": "ASSIGNED",
+      },
+      {
+        "title": "Rose Garden Florist",
+        "orderId": "#OD-5102",
+        "branch": "East Village",
+        "pickup": "45 Flower Ave, Suite 2",
+        "delivery": "77 Sunset Blvd, House 12",
+        "earning": "\$12.00",
+        "status": "QUEUED",
+      },
+      {
+        "title": "City Pharmacy",
+        "orderId": "#OD-5299",
+        "branch": "North Hill",
+        "pickup": "200 Health Plaza",
+        "delivery": "Old Town Residency, Apt 5",
+        "earning": "\$5.25",
+        "status": "QUEUED",
+      },
+    ];
 
   @override
   Widget build(BuildContext context) {
@@ -132,29 +163,89 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-  /// ================= ASSIGNED ORDERS =================
-  Widget _assignedOrders() {
+Widget _assignedOrders() {
   return ListView(
     padding: EdgeInsets.symmetric(horizontal: 16.w),
     children: [
-      OrderCard(
-        title: "Burger King",
-        orderId: "#ORD-4923",
-        pickup: "124 Main Street, West Side",
-        delivery: "Apartment 4B, 892 Broadway",
-        earning: "\$8.50",
-        status: "ASSIGNED",
-        buttonText: "View Details",
-        branch: '',
-        onPressed: () {
-          Get.to(() => const TransferOrderScreen());
-        },
+
+      SizedBox(height: 16.h),
+
+      /// -------- ORDERS --------
+      ...orders.map((order) {
+        return Padding(
+          padding: EdgeInsets.only(bottom: 14.h),
+          child: OrderCard(
+            title: order["title"],
+            orderId: order["orderId"],
+            branch: order["branch"],
+            pickup: order["pickup"],
+            delivery: order["delivery"],
+            earning: order["earning"],
+            status: order["status"],
+            buttonText: order["status"] == "ASSIGNED"
+                ? "Start Task"
+                : "View Details",
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      OrderDetailsScreen(order: order),
+                ),
+              );
+            },
+          ),
+        );
+      }).toList(),
+
+      /// -------- PERFORMANCE SECTION --------
+      SizedBox(height: 24.h),
+
+      Text(
+        "Today's Performance",
+        style: TextStyle(
+          fontSize: 18.sp,
+          fontWeight: FontWeight.bold,
+        ),
       ),
+
+      SizedBox(height: 16.h),
+
+      Row(
+        children: [
+          Expanded(
+            child: PerformanceCard(
+              icon: Icons.check,
+              iconColor: Colors.green,
+              count: 12,
+              label: "Done",
+            ),
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: PerformanceCard(
+              icon: Icons.access_time,
+              iconColor: Colors.orange,
+              count: 3,
+              label: "Pending",
+            ),
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: PerformanceCard(
+              icon: Icons.refresh,
+              iconColor: Colors.red,
+              count: 0,
+              label: "Returns",
+            ),
+          ),
+        ],
+      ),
+
+      SizedBox(height: 40.h),
     ],
   );
 }
-
   /// ================= RETURN ORDERS =================
  Widget _returnOrders() {
   return ListView(
@@ -165,4 +256,61 @@ class _HomeScreenState extends State<HomeScreen> {
     ],
   );
 }
+}
+class PerformanceCard extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final int count;
+  final String label;
+
+  const PerformanceCard({
+    super.key,
+    required this.icon,
+    required this.iconColor,
+    required this.count,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      margin: EdgeInsets.only(bottom: 8.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10.r,
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 20.r,
+            backgroundColor: iconColor.withOpacity(0.15),
+            child: Icon(icon, color: iconColor, size: 20.sp),
+          ),
+          SizedBox(height: 10.h),
+          Text(
+            "$count",
+            style: TextStyle(
+              fontSize: 20.sp,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 4.h),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.sp,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
