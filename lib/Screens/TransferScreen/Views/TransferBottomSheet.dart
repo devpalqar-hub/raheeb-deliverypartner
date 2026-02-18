@@ -1,8 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
+import 'package:raheeb_deliverypartner/Screens/HomeScreen/Service/AssignedController.dart';
+
 
 class TransferReasonBottomSheet extends StatefulWidget {
-  const TransferReasonBottomSheet({super.key});
+
+  final String orderId;
+  final String deliveryPartnerId;
+  final String partnerName;
+
+  const TransferReasonBottomSheet({
+    super.key,
+    required this.orderId,
+    required this.deliveryPartnerId,
+    required this.partnerName,
+  });
 
   @override
   State<TransferReasonBottomSheet> createState() =>
@@ -11,6 +24,10 @@ class TransferReasonBottomSheet extends StatefulWidget {
 
 class _TransferReasonBottomSheetState
     extends State<TransferReasonBottomSheet> {
+
+  final OrderController controller = Get.find<OrderController>();
+  final TextEditingController notesController =
+      TextEditingController();
 
   int selectedIndex = 0;
 
@@ -23,133 +40,148 @@ class _TransferReasonBottomSheetState
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(20.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(24.r),
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-
-          /// HANDLE BAR
-          Container(
-            width: 40.w,
-            height: 4.h,
-            margin: EdgeInsets.only(bottom: 14.h),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(10.r),
-            ),
+    return SafeArea(
+      child: SingleChildScrollView(
+        child: Container(
+          padding: EdgeInsets.all(20.w),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius:
+                BorderRadius.vertical(top: Radius.circular(24.r)),
           ),
-
-          /// TITLE
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              "Reason for Transfer",
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-
-          SizedBox(height: 6.h),
-
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              "Why are you transferring order #4921 to Michael?",
-              style: TextStyle(
-                fontSize: 13.sp,
-                color: Colors.grey,
-              ),
-            ),
-          ),
-
-          SizedBox(height: 18.h),
-
-          /// REASON LIST
-          ...List.generate(
-            reasons.length,
-            (index) => _reasonTile(index),
-          ),
-
-          SizedBox(height: 16.h),
-
-          /// NOTES FIELD
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 14.w),
-            height: 55.h,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(14.r),
-            ),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: "Add additional notes (optional)...",
-                border: InputBorder.none,
-                hintStyle: TextStyle(fontSize: 13.sp),
-              ),
-            ),
-          ),
-
-          SizedBox(height: 20.h),
-
-          /// BUTTONS
-          Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
 
-              /// CANCEL
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 14.h),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14.r),
-                    ),
-                  ),
-                  child: Text(
-                    "Cancel",
-                    style: TextStyle(fontSize: 15.sp, color: Colors.black),
+              Container(
+                width: 40.w,
+                height: 4.h,
+                margin: EdgeInsets.only(bottom: 14.h),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius:
+                      BorderRadius.circular(10.r),
+                ),
+              ),
+
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Reason for Transfer",
+                  style: TextStyle(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
 
-              SizedBox(width: 12.w),
+              SizedBox(height: 6.h),
 
-              /// CONFIRM
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xff2F80ED),
-                    padding: EdgeInsets.symmetric(vertical: 14.h),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14.r),
-                    ),
-                  ),
-                  child: Text(
-                    "Confirm Transfer",
-                    style: TextStyle(fontSize: 15.sp, color: Colors.white),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Why are you transferring order #${widget.orderId} to ${widget.partnerName}?",
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    color: Colors.grey,
                   ),
                 ),
+              ),
+
+              SizedBox(height: 18.h),
+
+              ...List.generate(
+                reasons.length,
+                (index) => _reasonTile(index),
+              ),
+
+              SizedBox(height: 16.h),
+
+              Container(
+                padding:
+                    EdgeInsets.symmetric(horizontal: 14.w),
+                height: 55.h,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius:
+                      BorderRadius.circular(14.r),
+                ),
+                child: TextField(
+                  controller: notesController,
+                  decoration: InputDecoration(
+                    hintText:
+                        "Add additional notes (optional)...",
+                    border: InputBorder.none,
+                  ),
+                ),
+              ),
+
+              SizedBox(height: 20.h),
+
+              Row(
+                children: [
+
+                  Expanded(
+                    child: OutlinedButton(
+                      style: ElevatedButton.styleFrom(
+              backgroundColor:  const Color(0xff2F80ED),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 12,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+            ),
+                      onPressed: Get.back,
+                      child: Text("Cancel",style: TextStyle(color: Colors.white),),
+                    ),
+                  ),
+
+                  SizedBox(width: 12.w),
+
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+              backgroundColor:  const Color(0xff2F80ED),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 12,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+            ),
+                      onPressed: () async {
+
+                        String notes =
+                            "${reasons[selectedIndex]} - ${notesController.text}";
+
+                        bool success =
+                            await controller.assignDeliveryPartner(
+                          orderId: widget.orderId,
+                          deliveryPartnerId:
+                              widget.deliveryPartnerId,
+                          notes: notes,
+                        );
+
+                        if (success) {
+                          Get.back();
+                          Get.back();
+                        }
+                      },
+                      child: const Text("Confirm Transfer",style: TextStyle(color: Colors.white),),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-
-          SizedBox(height: 10.h),
-        ],
+        ),
       ),
     );
   }
 
-  /// ================= REASON TILE =================
   Widget _reasonTile(int index) {
     bool selected = selectedIndex == index;
 
@@ -173,43 +205,14 @@ class _TransferReasonBottomSheetState
         ),
         child: Row(
           children: [
-
-            /// RADIO
-            Container(
-              width: 22.w,
-              height: 22.w,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: selected
-                      ? const Color(0xff2F80ED)
-                      : Colors.grey,
-                  width: 2,
-                ),
-              ),
-              child: selected
-                  ? Center(
-                      child: Container(
-                        width: 10.w,
-                        height: 10.w,
-                        decoration: const BoxDecoration(
-                          color: Color(0xff2F80ED),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    )
-                  : null,
+            Icon(
+              selected
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_off,
+              color: const Color(0xff2F80ED),
             ),
-
             SizedBox(width: 12.w),
-
-            Text(
-              reasons[index],
-              style: TextStyle(
-                fontSize: 15.sp,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            Text(reasons[index]),
           ],
         ),
       ),

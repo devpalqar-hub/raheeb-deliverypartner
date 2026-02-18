@@ -1,61 +1,65 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
+import 'package:raheeb_deliverypartner/Screens/HomeScreen/Service/AssignedController.dart';
 import 'package:raheeb_deliverypartner/Screens/TransferScreen/Views/TransferBottomSheet.dart';
 
-class TransferOrderScreen extends StatelessWidget {
-  const TransferOrderScreen({super.key});
+class TransferOrderScreen extends StatefulWidget {
+  final String orderNumber;
+  final String orderId;
+
+  const TransferOrderScreen({
+    super.key,
+    required this.orderNumber,
+    required this.orderId,
+  });
+
+  @override
+  State<TransferOrderScreen> createState() =>
+      _TransferOrderScreenState();
+}
+
+class _TransferOrderScreenState extends State<TransferOrderScreen> {
+
+  final OrderController controller = Get.find<OrderController>();
+
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.fetchDeliveryPartners();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xffF4F5F7),
-
-      /// ---------------- APP BAR ----------------
+   
+ backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+       backgroundColor: Colors.white,
         elevation: 0,
-
-        /// BACK BUTTON
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black, size: 22.sp),
-          onPressed: () => Navigator.pop(context),
+          icon: Icon(Icons.arrow_back,
+              color: Colors.black, size: 22.sp),
+          onPressed: Get.back,
         ),
-
         centerTitle: true,
         title: Text(
-          "Transfer Order #4921",
+          "Transfer Order #${widget.orderNumber}",
           style: TextStyle(
             color: Colors.black,
             fontSize: 16.sp,
             fontWeight: FontWeight.w600,
           ),
         ),
-
-        /// CANCEL BUTTON
-        actions: [
-          Padding(
-            padding: EdgeInsets.only(right: 16.w),
-            child: GestureDetector(
-              onTap: () => _showCancelDialog(context),
-              child: Center(
-                child: Text(
-                  "Cancel",
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ),
-          )
-        ],
       ),
 
-      /// ---------------- BODY ----------------
       body: Column(
         children: [
-          /// SEARCH BAR
+
+          /// SEARCH BAR (UNCHANGED)
           Padding(
             padding: EdgeInsets.all(16.w),
             child: Container(
@@ -67,63 +71,52 @@ class TransferOrderScreen extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.search, size: 20.sp, color: Colors.grey),
+                  Icon(Icons.search,
+                      size: 20.sp, color: Colors.grey),
                   SizedBox(width: 10.w),
                   Text(
                     "Search partner by name or ID",
-                    style:
-                        TextStyle(fontSize: 14.sp, color: Colors.grey),
+                    style: TextStyle(
+                        fontSize: 14.sp, color: Colors.grey),
                   ),
                 ],
               ),
             ),
           ),
 
-          /// PARTNER LIST
           Expanded(
-            child: ListView(
-              children: [
-                _partnerCard(context,
-                    name: "Michael Chen",
-                    distance: "0.2 mi",
-                    active: "0 Active",
-                    badge: "FREE",
-                    badgeColor: Colors.green.shade100,
-                    badgeTextColor: Colors.green,
-                    avatarColor: Colors.teal),
+            child: GetBuilder<OrderController>(
+              builder: (ctrl) {
 
-                _partnerCard(context,
-                    name: "Sarah Jenkins",
-                    distance: "0.5 mi",
-                    active: "1 Active",
-                    avatarAsset: "assets/images/profile.png"),
+                if (ctrl.isPartnerLoading) {
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
 
-                _partnerCard(context,
-                    name: "David Kim",
-                    distance: "0.8 mi",
-                    active: "2 Active",
-                    initials: "DK"),
+                if (ctrl.deliveryPartners.isEmpty) {
+                  return const Center(
+                    child: Text("No delivery partners found"),
+                  );
+                }
 
-                Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-                  child: Text(
-                    "All Active Partners",
-                    style: TextStyle(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w600),
-                  ),
-                ),
+                return ListView.builder(
+                  itemCount: ctrl.deliveryPartners.length,
+                  itemBuilder: (_, index) {
 
-                _partnerCard(context,
-                    name: "Marcus O.",
-                    distance: "1.2 mi",
-                    active: "4 Active",
-                    badge: "FULL",
-                    badgeColor: Colors.red.shade100,
-                    badgeTextColor: Colors.red,
-                    disabled: true),
-              ],
+                    final partner =
+                        ctrl.deliveryPartners[index];
+
+                    return _partnerCard(
+                      name: partner.name ?? "Unknown",
+                      email: partner.email,
+                      partnerId: partner.id ?? "",
+                      initials:
+                          _getInitials(partner.name ?? "DP"),
+                    );
+                  },
+                );
+              },
             ),
           ),
         ],
@@ -131,62 +124,25 @@ class TransferOrderScreen extends StatelessWidget {
     );
   }
 
-  /// ================= CANCEL CONFIRMATION =================
-  void _showCancelDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14.r),
-        ),
-        title: Text(
-          "Cancel Transfer?",
-          style:
-              TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
-        ),
-        content: Text(
-          "Are you sure you want to cancel this transfer?",
-          style: TextStyle(fontSize: 14.sp),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("No", style: TextStyle(fontSize: 14.sp)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context); // close dialog
-              Navigator.pop(context); // go back screen
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xff2F80ED),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.r),
-              ),
-            ),
-            child: Text("Yes", style: TextStyle(fontSize: 14.sp)),
-          ),
-        ],
-      ),
-    );
+  String _getInitials(String name) {
+    final parts = name.split(" ");
+    if (parts.length == 1) {
+      return parts.first[0].toUpperCase();
+    }
+    return parts[0][0].toUpperCase() +
+        parts[1][0].toUpperCase();
   }
 
-  /// ================= PARTNER CARD =================
-  Widget _partnerCard(
-    BuildContext context, {
+  /// ✅ ONLY LOGIC ADDED HERE
+  Widget _partnerCard({
     required String name,
-    required String distance,
-    required String active,
-    String? badge,
-    Color? badgeColor,
-    Color? badgeTextColor,
-    String? avatarAsset,
-    String? initials,
-    Color? avatarColor,
-    bool disabled = false,
+    required String email,
+    required String initials,
+    required String partnerId,
   }) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
+      margin:
+          EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
       padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -194,103 +150,60 @@ class TransferOrderScreen extends StatelessWidget {
       ),
       child: Row(
         children: [
-          /// AVATAR
           CircleAvatar(
             radius: 24.r,
-            backgroundColor: avatarColor ?? Colors.grey.shade300,
-            backgroundImage:
-                avatarAsset != null ? AssetImage(avatarAsset) : null,
-            child: avatarAsset == null && initials != null
-                ? Text(initials,
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14.sp))
-                : null,
+            backgroundColor: Colors.grey.shade300,
+            child: Text(
+              initials,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14.sp,
+              ),
+            ),
           ),
 
           SizedBox(width: 12.w),
 
-          /// INFO
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Text(name,
-                        style: TextStyle(
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.w600)),
-                    if (badge != null) ...[
-                      SizedBox(width: 8.w),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: 8.w, vertical: 3.h),
-                        decoration: BoxDecoration(
-                          color: badgeColor,
-                          borderRadius: BorderRadius.circular(6.r),
-                        ),
-                        child: Text(
-                          badge,
-                          style: TextStyle(
-                              fontSize: 11.sp,
-                              color: badgeTextColor,
-                              fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ]
-                  ],
-                ),
+                Text(name,
+                    style: TextStyle(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w600)),
                 SizedBox(height: 6.h),
-                Row(
-                  children: [
-                    Icon(Icons.navigation,
-                        size: 14.sp, color: Colors.grey),
-                    SizedBox(width: 4.w),
-                    Text(distance,
-                        style: TextStyle(
-                            fontSize: 12.sp, color: Colors.grey)),
-                    SizedBox(width: 12.w),
-                    Icon(Icons.work_outline,
-                        size: 14.sp, color: Colors.grey),
-                    SizedBox(width: 4.w),
-                    Text(active,
-                        style: TextStyle(
-                            fontSize: 12.sp, color: Colors.grey)),
-                  ],
-                ),
+                Text(email,
+                    style: TextStyle(
+                        fontSize: 12.sp,
+                        color: Colors.grey)),
               ],
             ),
           ),
 
-          /// TRANSFER BUTTON
           ElevatedButton(
-            onPressed: disabled
-                ? null
-                : () {
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                      builder: (_) =>
-                          const TransferReasonBottomSheet(),
-                    );
-                  },
             style: ElevatedButton.styleFrom(
-              backgroundColor: disabled
-                  ? Colors.grey.shade200
-                  : const Color(0xff2F80ED),
-              foregroundColor: disabled ? Colors.grey : Colors.white,
+              backgroundColor:  const Color(0xff2F80ED),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 12,
+              ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10.r),
               ),
-              padding: EdgeInsets.symmetric(
-                  horizontal: 16.w, vertical: 10.h),
             ),
-            child: Text(
-              disabled ? "Full" : "Transfer",
-              style: TextStyle(fontSize: 13.sp),
-            ),
+            onPressed: () {
+              Get.bottomSheet(
+                TransferReasonBottomSheet(
+                  orderId: widget.orderId,
+                  deliveryPartnerId: partnerId,
+                  partnerName: name,
+                ),
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+              );
+            },
+            child: const Text("Transfer",style: TextStyle(color: Colors.white),),
           ),
         ],
       ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class OrderCard extends StatelessWidget {
   final String title;
@@ -121,7 +122,7 @@ class OrderCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(delivery),
 
-          const SizedBox(height: 16),
+          
 
       const SizedBox(height: 16),
 
@@ -155,17 +156,17 @@ class OrderCard extends StatelessWidget {
 
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
+              backgroundColor:  const Color(0xff2F80ED),
               padding: const EdgeInsets.symmetric(
                 horizontal: 20,
                 vertical: 12,
               ),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
+                borderRadius: BorderRadius.circular(10.r),
               ),
             ),
             onPressed: onPressed,
-            child: Text(buttonText),
+            child: Text(buttonText,style: TextStyle(color: Colors.white),),
           ),
         ],
       ),
