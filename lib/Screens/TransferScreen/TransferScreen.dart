@@ -20,7 +20,6 @@ class TransferOrderScreen extends StatefulWidget {
 }
 
 class _TransferOrderScreenState extends State<TransferOrderScreen> {
-
   final OrderController controller = Get.find<OrderController>();
 
   @override
@@ -35,10 +34,9 @@ class _TransferOrderScreenState extends State<TransferOrderScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-   
- backgroundColor: Colors.grey.shade100,
+      backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-       backgroundColor: Colors.white,
+        backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back,
@@ -59,7 +57,7 @@ class _TransferOrderScreenState extends State<TransferOrderScreen> {
       body: Column(
         children: [
 
-          /// SEARCH BAR (UNCHANGED)
+          /// ✅ SEARCH BAR
           Padding(
             padding: EdgeInsets.all(16.w),
             child: Container(
@@ -74,16 +72,24 @@ class _TransferOrderScreenState extends State<TransferOrderScreen> {
                   Icon(Icons.search,
                       size: 20.sp, color: Colors.grey),
                   SizedBox(width: 10.w),
-                  Text(
-                    "Search partner by name or ID",
-                    style: TextStyle(
-                        fontSize: 14.sp, color: Colors.grey),
+
+                  Expanded(
+                    child: TextField(
+                      controller: controller.searchController,
+                      onChanged: controller.searchPartners,
+                      decoration: const InputDecoration(
+                        hintText:
+                            "Search partner by name or email",
+                        border: InputBorder.none,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
           ),
 
+          /// ✅ PARTNER LIST
           Expanded(
             child: GetBuilder<OrderController>(
               builder: (ctrl) {
@@ -94,22 +100,21 @@ class _TransferOrderScreenState extends State<TransferOrderScreen> {
                   );
                 }
 
-                if (ctrl.deliveryPartners.isEmpty) {
+                if (ctrl.filteredPartners.isEmpty) {
                   return const Center(
                     child: Text("No delivery partners found"),
                   );
                 }
 
                 return ListView.builder(
-                  itemCount: ctrl.deliveryPartners.length,
+                  itemCount: ctrl.filteredPartners.length,
                   itemBuilder: (_, index) {
-
                     final partner =
-                        ctrl.deliveryPartners[index];
+                        ctrl.filteredPartners[index];
 
                     return _partnerCard(
                       name: partner.name ?? "Unknown",
-                      email: partner.email,
+                      email: partner.email ?? "",
                       partnerId: partner.id ?? "",
                       initials:
                           _getInitials(partner.name ?? "DP"),
@@ -133,7 +138,6 @@ class _TransferOrderScreenState extends State<TransferOrderScreen> {
         parts[1][0].toUpperCase();
   }
 
-  /// ✅ ONLY LOGIC ADDED HERE
   Widget _partnerCard({
     required String name,
     required String email,
@@ -152,21 +156,19 @@ class _TransferOrderScreenState extends State<TransferOrderScreen> {
         children: [
           CircleAvatar(
             radius: 24.r,
-            backgroundColor: Colors.grey.shade300,
-            child: Text(
-              initials,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14.sp,
-              ),
-            ),
+            backgroundColor: Color(0xff2F80ED),
+            child: Text(initials,
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14.sp,color: Colors.white)),
           ),
 
           SizedBox(width: 12.w),
 
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
               children: [
                 Text(name,
                     style: TextStyle(
@@ -183,13 +185,12 @@ class _TransferOrderScreenState extends State<TransferOrderScreen> {
 
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor:  const Color(0xff2F80ED),
+              backgroundColor: const Color(0xff2F80ED),
               padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 12,
-              ),
+                  horizontal: 20, vertical: 12),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.r),
+                borderRadius:
+                    BorderRadius.circular(10.r),
               ),
             ),
             onPressed: () {
@@ -203,7 +204,8 @@ class _TransferOrderScreenState extends State<TransferOrderScreen> {
                 backgroundColor: Colors.transparent,
               );
             },
-            child: const Text("Transfer",style: TextStyle(color: Colors.white),),
+            child: const Text("Transfer",
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

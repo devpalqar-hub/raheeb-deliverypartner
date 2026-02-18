@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:raheeb_deliverypartner/Screens/HomeScreen/Model/DeliveryActionModel.dart';
 import 'package:raheeb_deliverypartner/Screens/HomeScreen/Model/TrackingModel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -11,6 +12,10 @@ class TrackingController extends GetxController {
   final String baseUrl = "https://api.ecom.palqar.cloud/v1";
 
   String? currentOrderId;
+  DeliveryActionResponse? deliveryActions;
+
+  List<ActionOrder> actionOrders = [];
+  List<ActionReturn> actionReturns = [];
 
   /// ==============================
   /// FETCH TRACKING DETAILS
@@ -61,6 +66,8 @@ class TrackingController extends GetxController {
       update();
     }
   }
+
+  
 
   /// ==============================
   /// CHANGE SINGLE ORDER STATUS
@@ -180,6 +187,55 @@ class TrackingController extends GetxController {
       print("BULK STATUS ERROR => $e");
       Get.snackbar("Error", e.toString());
       return false;
+    } finally {
+      isLoading = false;
+      update();
+    }
+  }
+
+
+   Future<void> fetchDeliveryActions() async {
+    try {
+      isLoading = true;
+      update();
+
+      final prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString("token");
+
+      final url = "$baseUrl/delivery-partners/my/actions";
+
+      print("========== DELIVERY ACTION API ==========");
+      print("URL => $url");
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      );
+
+      print("STATUS => ${response.statusCode}");
+      print("BODY => ${response.body}");
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+
+        deliveryActions = DeliveryActionResponse.fromJson(decoded);
+
+        /// ✅ fill lists
+        actionOrders = deliveryActions?.data.orders ?? [];
+        actionReturns = deliveryActions?.data.returns ?? [];
+
+        print("ORDERS COUNT => ${actionOrders.length}");
+        print("RETURNS COUNT => ${actionReturns.length}");
+      } else {
+        Get.snackbar("Error", "Failed to fetch delivery actions");
+      }
+    } catch (e, stack) {
+      print("DELIVERY ACTION ERROR => $e");
+      print(stack);
+      Get.snackbar("Error", e.toString());
     } finally {
       isLoading = false;
       update();

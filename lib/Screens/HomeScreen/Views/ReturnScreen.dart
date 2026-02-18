@@ -280,7 +280,7 @@ void _showPaymentMethodSheet() {
                 children: [
                   GestureDetector(
   onTap: () {
-    Get.back(); // Add parentheses to actually call it
+    Get.back(); 
   },
   child: Icon(Icons.arrow_back, size: 20.sp),
 ),
@@ -315,7 +315,7 @@ void _showPaymentMethodSheet() {
               Text(
                 "PICKUP LOCATION",
                 style: TextStyle(
-                  fontSize: 12.sp,
+                  fontSize: 14.sp,
                   letterSpacing: 1.1,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xff98A2B3),
@@ -358,7 +358,7 @@ void _showPaymentMethodSheet() {
                         SizedBox(height: 3.h),
 
                         Text(
-                          "${shipping.address}, ${shipping.city}, ${shipping.state} ${shipping.postalCode}",
+                         "${shipping?.address ?? ''}, ${shipping?.city ?? ''}, ${shipping?.state ?? ''} ${shipping?.postalCode ?? ''}",
                           style: TextStyle(
                             fontSize: 14.sp,
                             color: const Color(0xff475467),
@@ -393,7 +393,7 @@ void _showPaymentMethodSheet() {
               /// ================= MAP CARD =================
               GestureDetector(
                 onTap: () => _openMap(
-                    "${shipping.address}, ${shipping.city}, ${shipping.state} ${shipping.postalCode}"),
+                    "${shipping?.address ?? ''}, ${shipping?.city ?? ''}, ${shipping?.state ?? ''} ${shipping?.postalCode ?? ''}"),
                 child: Container(
                   height: 150.h,
                   width: double.infinity,
@@ -439,6 +439,146 @@ void _showPaymentMethodSheet() {
                   ),
                 ),
               ),
+              SizedBox(height: 22.h),
+
+               Text(
+                "ORDER DETAILS",
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  letterSpacing: 1.1,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xff98A2B3),
+                ),
+              ),
+              SizedBox(height: 14.h),
+
+/// ================= RETURN ITEMS =================
+Column(
+  children: returnOrder.returnItems.map((returnItem) {
+    final orderItem = returnItem.orderItem;
+    final product = orderItem.product;
+    final imageUrl = product.images.isNotEmpty ? product.images[0].url : '';
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 16.h),
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(14.r),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          /// ---------------- Product Info ----------------
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              /// Product Image
+              Container(
+                width: 60.w,
+                height: 60.w,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10.r),
+                  color: Colors.white,
+                  image: imageUrl.isNotEmpty
+                      ? DecorationImage(
+                          image: NetworkImage(imageUrl),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+              ),
+
+              SizedBox(width: 12.w),
+
+              /// Name, Price, Quantity
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.name,
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xff101828),
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      "Price: ₹${orderItem.discountedPrice}",
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        color: const Color(0xff475467),
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      "Quantity: ${orderItem.quantity}",
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        color: const Color(0xff475467),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          SizedBox(height: 12.h),
+
+          /// ---------------- Return Details ----------------
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  "Reason: ${returnItem.reason}",
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    color: const Color(0xff475467),
+                  ),
+                ),
+              ),
+              Text(
+                "Refund: ₹${returnOrder.refundAmount}",
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xff1E5CC6),
+                ),
+              ),
+            ],
+          ),
+
+          SizedBox(height: 4.h),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Status: ${returnOrder.status}",
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  color: Colors.green,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                "Payment: ${returnOrder.returnPaymentMethod ?? 'N/A'}",
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  color: const Color(0xff344054),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }).toList(),
+),
             ],
           ),
         ),

@@ -7,6 +7,7 @@ import '../Model/ReturnOrderModel.dart';
 class ReturnOrderController extends GetxController {
   bool isLoading = false;
   List<ReturnOrder> returnOrders = [];
+  List<ReturnOrder> filteredReturnOrders = [];
 
   final String baseUrl = "https://api.ecom.palqar.cloud/v1";
 
@@ -16,47 +17,89 @@ class ReturnOrderController extends GetxController {
     super.onInit();
   }
 
-  /// ---------------- FETCH ALL RETURNS ----------------
-  Future<void> fetchReturns() async {
-    try {
-      isLoading = true;
-      update(); // notify UI
+  Future<void> fetchReturns({String? orderId,int page = 1, int limit = 20}) async {
+  try {
+    isLoading = true;
+    update();
 
-      final prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString("token");
-      print("TOKEN => $token");
+    /// 🔹 Get token
+    final prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString("token");
 
-      final url = Uri.parse('$baseUrl/returns/delivery-partner/my-returns');
-      print("GET Request URL: $url");
+    print("========== FETCH RETURNS START ==========");
 
-      final response = await http.get(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer $token",
-        },
+    if (token == null || token.isEmpty) {
+      print("❌ TOKEN MISSING");
+      Get.snackbar("Session Expired", "Please login again");
+      return;
+    }
+
+    /// 🔹 Build URL
+    String url = "$baseUrl/returns/delivery-partner/my-returns";
+
+    if (orderId != null && orderId.isNotEmpty) {
+      url = "$url?orderId=$orderId";
+    }
+
+    print("📡 REQUEST URL => $url");
+    print("🔑 TOKEN => Bearer $token");
+
+    /// 🔹 API CALL
+    final response = await http.get(
+      Uri.parse(url),
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    /// 🔹 RESPONSE DEBUG
+    print("✅ STATUS CODE => ${response.statusCode}");
+    print("📦 RAW RESPONSE BODY =>");
+    print(response.body);
+
+    final data = jsonDecode(response.body);
+
+    /// 🔹 SUCCESS CASE
+    if (response.statusCode == 200 && data["success"] == true) {
+      final List<dynamic> list = data['data']?['data'] ?? [];
+
+      print("📊 API DATA LENGTH => ${list.length}");
+
+      /// ✅ Clear old list
+      returnOrders.clear();
+
+      /// ✅ Parse model
+      returnOrders.addAll(
+        list.map((e) {
+          print("➡️ Parsing Order ID: ${e['_id']}");
+          return ReturnOrder.fromJson(e);
+        }).toList(),
       );
 
-      print("STATUS => ${response.statusCode}");
-      print("BODY => ${response.body}");
+      /// ✅ Copy for filtering
+      filteredReturnOrders = List.from(returnOrders);
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final List<dynamic> list = data['data']['data'] ?? [];
-        returnOrders = list.map((e) => ReturnOrder.fromJson(e)).toList();
-        print("Parsed Return Orders Count: ${returnOrders.length}");
-      } else {
-        Get.snackbar("Error", "Failed to fetch return orders");
-      }
-    } catch (e) {
-      print("Error fetching returns: $e");
-      Get.snackbar("Error", "Failed to fetch return orders");
-    } finally {
-      isLoading = false;
-      update();
+      print("✅ Parsed Return Orders Count => ${returnOrders.length}");
+    } else {
+      print("❌ API ERROR => ${data["message"]}");
+
+      Get.snackbar(
+        "Error",
+        data["message"] ?? "Failed to fetch return orders",
+      );
     }
-  }
+  } catch (e, stack) {
+    print("🚨 RETURN ERROR => $e");
+    print("STACK TRACE => $stack");
 
+    Get.snackbar("Error", "Failed to fetch return orders");
+  } finally {
+    isLoading = false;
+    update();
+    print("========== FETCH RETURNS END ==========");
+  }
+}
   /// ---------------- FETCH RETURN BY ID ----------------
   Future<ReturnOrder?> fetchReturnById(String id) async {
     try {

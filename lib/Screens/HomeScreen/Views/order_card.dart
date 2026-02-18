@@ -70,9 +70,9 @@ class OrderCard extends StatelessWidget {
               ),
 
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
+                padding:  EdgeInsets.symmetric(
+                  horizontal: 8.h,
+                  vertical: 6.h,
                 ),
                 decoration: BoxDecoration(
                   color: status == "ASSIGNED"
@@ -87,7 +87,7 @@ class OrderCard extends StatelessWidget {
                         ? Colors.blue
                         : Colors.orange,
                     fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                    fontSize: 10.sp,
                   ),
                 ),
               ),

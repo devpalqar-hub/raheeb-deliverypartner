@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:raheeb_deliverypartner/Screens/HomeScreen/Model/DeliveryPartnerModel.dart';
@@ -15,8 +16,17 @@ class OrderController extends GetxController {
   Map<String, dynamic> dateRange = {};
   List<dynamic> recentOrders = [];
   /// ================= DELIVERY PARTNERS =================
-List<DeliveryPartnerModel> deliveryPartners = [];
-bool isPartnerLoading = false;
+  List<DeliveryPartnerModel> deliveryPartners = [];
+  List<DeliveryPartnerModel> filteredPartners = [];
+  bool isPartnerLoading = false;
+
+  final TextEditingController searchController =
+      TextEditingController();
+  List<OrderModel> filteredOrders = [];
+
+final TextEditingController orderSearchController =
+    TextEditingController();
+
 
   final String baseUrl = "https://api.ecom.palqar.cloud/v1";
 
@@ -28,17 +38,42 @@ bool isPartnerLoading = false;
     super.onInit();
   }
 
-  /// ================= FETCH ORDERS =================
-  Future<void> fetchMyOrders() async {
+ void searchPartners(String query) {
+    if (query.isEmpty) {
+      filteredPartners = deliveryPartners;
+    } else {
+      filteredPartners = deliveryPartners.where((p) {
+        final name = (p.name ?? "").toLowerCase();
+        final email = (p.email ?? "").toLowerCase();
+
+        return name.contains(query.toLowerCase()) ||
+            email.contains(query.toLowerCase());
+      }).toList();
+    }
+    update();
+  }
+void searchOrders(String query) {
+  if (query.isEmpty) {
+    filteredOrders = orders;
+  } else {
+    filteredOrders = orders.where((order) {
+      return order.orderNumber
+          .toLowerCase()
+          .contains(query.toLowerCase());
+    }).toList();
+  }
+  update();
+}
+  Future<void> fetchDeliveryPartners() async {
     try {
-      isLoading = true;
+      isPartnerLoading = true;
       update();
 
       final prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString("token");
 
       final response = await http.get(
-        Uri.parse("$baseUrl/orders/delivery-partner/my-orders"),
+        Uri.parse("$baseUrl/delivery-partners"),
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $token",
@@ -48,20 +83,80 @@ bool isPartnerLoading = false;
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200 && data["success"] == true) {
-        List list = data["data"]["data"];
-        orders = list.map((e) => OrderModel.fromJson(e)).toList();
+        List list = data["data"];
+
+        deliveryPartners =
+            list.map((e) => DeliveryPartnerModel.fromJson(e)).toList();
+
+        /// ✅ INITIAL LIST
+        filteredPartners = deliveryPartners;
       } else {
-        Get.snackbar("Error", "Failed to load orders");
+        Get.snackbar("Error", "Failed to load partners");
       }
     } catch (e) {
-      print("ORDER ERROR => $e");
       Get.snackbar("Error", e.toString());
     } finally {
-      isLoading = false;
+      isPartnerLoading = false;
       update();
     }
   }
+  /// ================= FETCH ORDERS =================
+Future<void> fetchMyOrders({String? orderId, int page = 1, int limit = 10}) async {
+  try {
+    isLoading = true;
+    update();
 
+    final prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString("token");
+
+    /// ✅ Build URL dynamically with pagination
+    String url = "$baseUrl/orders/delivery-partner/my-orders?page=$page&limit=$limit";
+
+    if (orderId != null && orderId.isNotEmpty) {
+      url = "$url&orderId=$orderId";
+    }
+
+    print("FETCH ORDERS URL => $url");
+
+    final response = await http.get(
+      Uri.parse(url),
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("STATUS CODE => ${response.statusCode}");
+    print("RAW RESPONSE => ${response.body}");
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 200 && data["success"] == true) {
+      List list = data["data"]["data"];
+
+      List<OrderModel> fetchedOrders = list.map((e) => OrderModel.fromJson(e)).toList();
+
+      /// ✅ Append to existing list for pagination
+      if (page == 1) {
+        orders = fetchedOrders;
+      } else {
+        orders.addAll(fetchedOrders);
+      }
+
+      /// ✅ keep filtered list synced (for search)
+      filteredOrders = orders;
+    } else {
+      Get.snackbar("Error", data["message"] ?? "Failed to load orders");
+    }
+  } catch (e, stack) {
+    print("ORDER ERROR => $e");
+    print(stack);
+    Get.snackbar("Error", e.toString());
+  } finally {
+    isLoading = false;
+    update();
+  }
+}
   /// ================= CHANGE ORDER STATUS =================
  Future<bool> changeOrderStatus({
   required String orderId,
@@ -168,53 +263,6 @@ bool isPartnerLoading = false;
   }
 
 /// ================= FETCH DELIVERY PARTNERS =================
-Future<void> fetchDeliveryPartners() async {
-  try {
-    isPartnerLoading = true;
-    update();
-
-    final prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString("token");
-
-    final url = "$baseUrl/delivery-partners";
-
-    /// ===== DEBUG REQUEST =====
-    print("===== FETCH DELIVERY PARTNERS =====");
-    print("URL => $url");
-    print("TOKEN => $token");
-
-    final response = await http.get(
-      Uri.parse(url),
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-      },
-    );
-
-    print("STATUS CODE => ${response.statusCode}");
-    print("RAW RESPONSE => ${response.body}");
-
-    final data = jsonDecode(response.body);
-
-    if (response.statusCode == 200 && data["success"] == true) {
-      List list = data["data"];
-
-      deliveryPartners =
-          list.map((e) => DeliveryPartnerModel.fromJson(e)).toList();
-
-      print("TOTAL PARTNERS => ${deliveryPartners.length}");
-    } else {
-      Get.snackbar("Error", data["message"] ?? "Failed to load partners");
-    }
-  } catch (e, stack) {
-    print("PARTNER ERROR => $e");
-    print(stack);
-    Get.snackbar("Error", e.toString());
-  } finally {
-    isPartnerLoading = false;
-    update();
-  }
-}
 
 /// ================= ASSIGN DELIVERY PARTNER =================
 Future<bool> assignDeliveryPartner({

@@ -194,18 +194,20 @@ void _openMap(String address) async {
                         Icon(Icons.location_on_outlined, color: Colors.grey, size: 20.sp),
                         SizedBox(width: 10.w),
                         Expanded(
-                          child: Text(
-                            "${shipping.address}, ${shipping.city}, ${shipping.state} ${shipping.postalCode}",
-                            style: TextStyle(
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                         child: Text(
+  shipping != null
+    ? "${shipping.address}, ${shipping.city}, ${shipping.state} ${shipping.postalCode}"
+    : "No address available",
+  style: TextStyle(
+    fontSize: 14.sp,
+    color: Colors.black,
+  ),
+),
                         ),
                         if (isFullReturn)
                           GestureDetector(
                             onTap: () => _openMap(
-                                "${shipping.address}, ${shipping.city}, ${shipping.state} ${shipping.postalCode}"),
+                                 "${shipping?.address ?? ''}, ${shipping?.city ?? ''}, ${shipping?.state ?? ''} ${shipping?.postalCode ?? ''}",),
                             child: Container(
                               padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                               decoration: BoxDecoration(
