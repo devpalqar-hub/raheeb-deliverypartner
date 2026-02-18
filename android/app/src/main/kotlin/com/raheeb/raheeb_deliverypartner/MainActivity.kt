@@ -1,4 +1,4 @@
-package com.example.raheeb_deliverypartner
+package com.raheeb.raheeb_deliverypartner
 
 import io.flutter.embedding.android.FlutterActivity
 

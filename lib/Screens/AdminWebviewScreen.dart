@@ -1,31 +1,13 @@
-import 'dart:io';
-import 'dart:async';
+import 'dart:developer';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:get/get_core/src/get_main.dart';
-import 'package:get/get_navigation/src/extension_navigation.dart';
+import 'package:get/get.dart';
 import 'package:raheeb_deliverypartner/Screens/LoginScreen/LoginScreen.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-/// ─────────────────────────────────────────────────────────────────────────────
-/// AdminWebViewScreen
-/// URL  : https://admin.ecom.palqar.cloud/mobile/{accessToken}
-/// Features:
-///   • Full hardware/software back-button handling
-///   • Native file upload (camera + gallery + file picker)
-///   • Keyboard-safe layout (resizes body when keyboard appears)
-///   • Auto-logout detection (redirected to /login)
-///   • Pull-to-refresh
-///   • Error page with retry
-///   • Progress indicator
-///   • No-network snackbar
-/// ─────────────────────────────────────────────────────────────────────────────
 
 class AdminWebViewScreen extends StatefulWidget {
   final String accessToken;
@@ -36,463 +18,317 @@ class AdminWebViewScreen extends StatefulWidget {
   State<AdminWebViewScreen> createState() => _AdminWebViewScreenState();
 }
 
-class _AdminWebViewScreenState extends State<AdminWebViewScreen>
-    with WidgetsBindingObserver {
+class _AdminWebViewScreenState extends State<AdminWebViewScreen> {
   late final WebViewController _controller;
 
-  // ── State ──────────────────────────────────────────────────────────────────
   bool _isLoading = true;
   bool _hasError = false;
-  String _errorMessage = '';
-  int _loadingProgress = 0;
-  bool _canGoBack = false;
-  bool _isLoggedOut = false;
-  String _currentUrl = '';
+  String _errorMessage = "";
+  int _progress = 0;
+  bool _logoutHandled = false;
 
-  // ── Constants ──────────────────────────────────────────────────────────────
-  static const String _baseUrl = 'https://admin.ecom.palqar.cloud';
-  static const String _loginPath = '/login';
+  static const String baseUrl = "https://admin.ecom.palqar.cloud";
 
-  String get _initialUrl => '$_baseUrl/mobile/${widget.accessToken}';
+  String get initialUrl => "$baseUrl/mobile/${widget.accessToken}";
 
-  // ── Lifecycle ──────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _initWebView();
   }
 
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  // ── WebView Initialization ─────────────────────────────────────────────────
+  /// INIT WEBVIEW
   void _initWebView() {
-    late final PlatformWebViewControllerCreationParams params;
+    late PlatformWebViewControllerCreationParams params;
 
     if (WebViewPlatform.instance is WebKitWebViewPlatform) {
-      // iOS
       params = WebKitWebViewControllerCreationParams(
         allowsInlineMediaPlayback: true,
-        mediaTypesRequiringUserAction: const <PlaybackMediaTypes>{},
+        mediaTypesRequiringUserAction: const {},
       );
     } else {
       params = const PlatformWebViewControllerCreationParams();
     }
 
-    _controller = WebViewController.fromPlatformCreationParams(params)
+    _controller = WebViewController.fromPlatformCreationParams(params);
+
+    _controller
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(Colors.white)
-      ..enableZoom(true)
-      ..setNavigationDelegate(_buildNavigationDelegate())
-      ..addJavaScriptChannel(
-        'FlutterBridge',
-        onMessageReceived: _onJsMessage,
-      )
-      ..loadRequest(Uri.parse(_initialUrl));
+      ..enableZoom(false)
+      ..setNavigationDelegate(_navigationDelegate)
+      ..addJavaScriptChannel("FlutterBridge", onMessageReceived: _onJsMessage)
+      ..loadRequest(Uri.parse(initialUrl));
 
-    // ── Android-specific settings ──────────────────────────────────────────
+    /// Android specific
     if (_controller.platform is AndroidWebViewController) {
       final androidController =
           _controller.platform as AndroidWebViewController;
+
+      AndroidWebViewController.enableDebugging(false);
+
       androidController
+        ..enableZoom(false)
         ..setMediaPlaybackRequiresUserGesture(false)
+        ..setOnShowFileSelector(_androidFilePicker)
+        ..setOverScrollMode(WebViewOverScrollMode.never)
         ..setGeolocationPermissionsPromptCallbacks(
           onShowPrompt: (request) async {
-            final granted = await _requestPermission(Permission.location);
+            final granted = await Permission.location.request().isGranted;
+
             return GeolocationPermissionsResponse(
               allow: granted,
               retain: false,
             );
           },
-          onHidePrompt: () {},
-        )
-        ..setOnShowFileSelector(_androidFileSelector);
+        );
     }
   }
 
-  // ── Navigation Delegate ────────────────────────────────────────────────────
-  NavigationDelegate _buildNavigationDelegate() {
-    return NavigationDelegate(
-      onPageStarted: (url) {
+  /// NAVIGATION
+  NavigationDelegate get _navigationDelegate => NavigationDelegate(
+    onProgress: (progress) {
+      setState(() {
+        _progress = progress;
+      });
+    },
+    onPageStarted: (url) {
+      log("Started: $url");
+
+      setState(() {
+        _isLoading = true;
+        _hasError = false;
+      });
+    },
+    onPageFinished: (url) async {
+      log("Finished: $url");
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      await _injectWebFixes();
+
+      if (_isLoginUrl(url)) {
+        _handleLogout();
+      }
+    },
+    onNavigationRequest: (request) {
+      final url = request.url;
+
+      if (_isLoginUrl(url)) {
+        _handleLogout();
+        return NavigationDecision.prevent;
+      }
+
+      if (url.startsWith(baseUrl)) {
+        return NavigationDecision.navigate;
+      }
+
+      _openExternal(url);
+
+      return NavigationDecision.prevent;
+    },
+    onWebResourceError: (error) {
+      if (error.isForMainFrame ?? true) {
         setState(() {
-          _isLoading = true;
-          _hasError = false;
-          _currentUrl = url;
-          _isLoggedOut = _isLoginUrl(url);
-        });
-        _updateCanGoBack();
-      },
-      onProgress: (progress) {
-        setState(() => _loadingProgress = progress);
-      },
-      onPageFinished: (url) async {
-        setState(() {
+          _hasError = true;
           _isLoading = false;
-          _currentUrl = url;
-          _isLoggedOut = _isLoginUrl(url);
+          _errorMessage = error.description;
         });
-        _updateCanGoBack();
+      }
+    },
+  );
 
-        if (_isLoggedOut) {
-          _handleLogout();
-        }
+  /// JS MESSAGE
+  void _onJsMessage(JavaScriptMessage message) {
+    final data = message.message;
 
-        // Inject JS helpers (file upload, keyboard)
-        await _injectHelpers();
-      },
-      onWebResourceError: (error) {
-        // Ignore sub-resource errors (ads, analytics)
-        if (error.isForMainFrame ?? true) {
-          setState(() {
-            _isLoading = false;
-            _hasError = true;
-            _errorMessage = _friendlyError(error.description);
-          });
-        }
-      },
-     onNavigationRequest: (request) {
-  final url = request.url;
+    log("JS: $data");
 
-  /// ✅ Detect logout BEFORE loading login page
-  if (_isLoginUrl(url)) {
-    _handleLogout();
-    return NavigationDecision.prevent; // stop WebView loading login page
-  }
-
-  final uri = Uri.tryParse(url);
-  if (uri == null) return NavigationDecision.prevent;
-
-  /// Allow internal navigation
-  if (url.startsWith(_baseUrl)) {
-    return NavigationDecision.navigate;
-  }
-
-  /// External links open browser
-  _launchExternalUrl(url);
-  return NavigationDecision.prevent;
-},
-    );
-  }
-
-  // ── Android File Selector ──────────────────────────────────────────────────
-  Future<List<String>> _androidFileSelector(
-      FileSelectorParams params) async {
-    final acceptTypes = params.acceptTypes;
-    final isImage = acceptTypes.any((t) => t.contains('image'));
-    final isVideo = acceptTypes.any((t) => t.contains('video'));
-    final isMedia = isImage || isVideo;
-
-    if (isMedia) {
-      final choice = await _showMediaPickerDialog(isImage: isImage);
-      if (choice == null) return [];
-      return choice;
+    if (data == "LOGOUT") {
+      _handleLogout();
+      return;
     }
 
-    // Generic file picker
-    return _pickGenericFile();
-  }
-
-  Future<List<String>> _showMediaPickerDialog(
-      {required bool isImage}) async {
-    final result = await showModalBottomSheet<List<String>>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => _MediaPickerSheet(isImage: isImage),
-    );
-    return result ?? [];
-  }
-
-  Future<List<String>> _pickGenericFile() async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        allowMultiple: false,
-        withData: false,
-      );
-      if (result == null || result.files.isEmpty) return [];
-      final path = result.files.single.path;
-      return path != null ? [path] : [];
-    } catch (_) {
-      return [];
+    if (_isLoginUrl(data)) {
+      _handleLogout();
     }
   }
 
-  // ── JS Helpers ─────────────────────────────────────────────────────────────
-  Future<void> _injectHelpers() async {
-    // Ensure viewport is responsive & keyboard-aware
+  /// INJECT WEB FIXES
+  Future<void> _injectWebFixes() async {
     await _controller.runJavaScript('''
       (function() {
+
+        // Viewport fix
         var meta = document.querySelector('meta[name="viewport"]');
+
         if (!meta) {
           meta = document.createElement('meta');
           meta.name = 'viewport';
           document.head.appendChild(meta);
         }
-        meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes';
 
-        // Scroll focused element into view when keyboard opens
-        document.addEventListener('focusin', function(e) {
-          setTimeout(function() {
-            if (e.target && e.target.scrollIntoView) {
-              e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-          }, 300);
+        meta.content =
+          'width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no';
+
+        // Disable horizontal scroll only
+        var style = document.createElement('style');
+
+        style.innerHTML = `
+          html, body {
+            width: 100% !important;
+            max-width: 100% !important;
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+          }
+
+          * {
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+          }
+        `;
+
+        document.head.appendChild(style);
+
+        document.body.style.overflowX = "hidden";
+        document.body.style.overflowY = "auto";
+
+        document.documentElement.style.overflowX = "hidden";
+        document.documentElement.style.overflowY = "auto";
+
+        // Prevent zoom
+        document.addEventListener('gesturestart', function(e) {
+          e.preventDefault();
         });
+
+        document.addEventListener('dblclick', function(e) {
+          e.preventDefault();
+        });
+
+        // Route detection
+        function notifyFlutter() {
+
+          var url = window.location.href;
+
+          FlutterBridge.postMessage(url);
+
+          if (url.includes('/login')) {
+            FlutterBridge.postMessage('LOGOUT');
+          }
+        }
+
+        notifyFlutter();
+
+        var pushState = history.pushState;
+
+        history.pushState = function() {
+          pushState.apply(history, arguments);
+          notifyFlutter();
+        };
+
+        var replaceState = history.replaceState;
+
+        history.replaceState = function() {
+          replaceState.apply(history, arguments);
+          notifyFlutter();
+        };
+
+        window.addEventListener('popstate', notifyFlutter);
+
       })();
     ''');
   }
 
-  // ── JS Channel Messages ────────────────────────────────────────────────────
-  void _onJsMessage(JavaScriptMessage message) {
-    final data = message.message;
-    if (data == 'logout') {
-      _handleLogout();
-    }
+  /// FILE PICKER
+  Future<List<String>> _androidFilePicker(FileSelectorParams params) async {
+    final result = await FilePicker.platform.pickFiles();
+
+    if (result == null) return [];
+
+    return [result.files.single.path!];
   }
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
-  bool _isLoginUrl(String url) =>
-      url.startsWith('$_baseUrl$_loginPath') ||
-      url.contains('/login');
+  /// LOGOUT
+  void _handleLogout() {
+    if (_logoutHandled) return;
 
- void _handleLogout() {
-  if (!mounted) return;
+    _logoutHandled = true;
 
-  Future.delayed(const Duration(milliseconds: 300), () {
-    if (!mounted) return;
-      Get.to(() => const EmailLoginScreen());
-
-  });
-}
-  Future<void> _updateCanGoBack() async {
-    final canGoBack = await _controller.canGoBack();
-    if (mounted) setState(() => _canGoBack = canGoBack);
+    Get.offAll(() => const EmailLoginScreen());
   }
 
-  Future<bool> _requestPermission(Permission permission) async {
-    var status = await permission.status;
-    if (status.isDenied) status = await permission.request();
-    return status.isGranted;
-  }
-
-  Future<void> _launchExternalUrl(String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri != null && await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
-  }
-
-  String _friendlyError(String raw) {
-    if (raw.contains('net::ERR_INTERNET_DISCONNECTED') ||
-        raw.contains('net::ERR_NAME_NOT_RESOLVED')) {
-      return 'No internet connection. Please check your network and try again.';
-    }
-    if (raw.contains('net::ERR_CONNECTION_TIMED_OUT')) {
-      return 'Connection timed out. The server took too long to respond.';
-    }
-    if (raw.contains('net::ERR_CONNECTION_REFUSED')) {
-      return 'Connection refused. The server may be down.';
-    }
-    return 'Something went wrong. Please try again.';
-  }
-
-  // ── Actions ────────────────────────────────────────────────────────────────
-  Future<bool> _onWillPop() async {
-    if (_canGoBack) {
-      await _controller.goBack();
+  bool _isLoginUrl(String url) {
+    try {
+      return Uri.parse(url).path == "/login";
+    } catch (_) {
       return false;
     }
-    return true; // Let the OS close/pop the screen
   }
 
-  void _refresh() {
-    setState(() {
-      _hasError = false;
-      _isLoading = true;
-    });
+  /// OPEN EXTERNAL
+  Future<void> _openExternal(String url) async {
+    final uri = Uri.parse(url);
+
+    if (await canLaunchUrl(uri)) {
+      launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  /// BACK BUTTON
+  Future<bool> _onBackPressed() async {
+    if (await _controller.canGoBack()) {
+      _controller.goBack();
+      return false;
+    }
+
+    return true;
+  }
+
+  /// REFRESH
+  Future<void> _refresh() async {
     _controller.reload();
   }
 
-  // ── Build ──────────────────────────────────────────────────────────────────
+  /// UI
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
-      onWillPop: _onWillPop,
+      onWillPop: _onBackPressed,
       child: Scaffold(
+        resizeToAvoidBottomInset: true,
         backgroundColor: Colors.white,
         body: SafeArea(
-          child: Column(
+          child: Stack(
             children: [
-              // Progress bar
-              if (_isLoading && _loadingProgress < 100)
-                LinearProgressIndicator(
-                  value: _loadingProgress / 100,
-                  minHeight: 3,
-                  backgroundColor: Colors.grey.shade200,
-                  color: const Color(0xFF1A73E8),
-                ),
-
-              // Logout banner
-              if (_isLoggedOut)
-                _LogoutBanner(onDismiss: () => Navigator.of(context).pop('logout')),
-
-              // Main content
-              Expanded(
-                child: Stack(
-                  children: [
-                    // WebView (always present to keep state)
-                    RefreshIndicator(
-                      onRefresh: () async => _refresh(),
-                      child: WebViewWidget(controller: _controller),
-                    ),
-
-                    // Error overlay
-                    if (_hasError)
-                      _ErrorOverlay(
-                        message: _errorMessage,
-                        onRetry: _refresh,
-                      ),
-
-                    // Initial loading spinner (before first paint)
-                    if (_isLoading && _loadingProgress == 0)
-                      const _LoadingPlaceholder(),
-                  ],
-                ),
-              ),
-
-              // Bottom navigation bar (back / forward / refresh / home)
-              _BottomNavBar(
-                canGoBack: _canGoBack,
-                isLoading: _isLoading,
-                onBack: () async {
-                  if (await _controller.canGoBack()) _controller.goBack();
-                },
-                onForward: () async {
-                  if (await _controller.canGoForward()) _controller.goForward();
-                },
+              /// WEBVIEW
+              RefreshIndicator(
                 onRefresh: _refresh,
-                onHome: () => _controller.loadRequest(Uri.parse(_initialUrl)),
+                child: WebViewWidget(controller: _controller),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Sub-widgets
-// ─────────────────────────────────────────────────────────────────────────────
+              /// PROGRESS BAR
+              if (_isLoading)
+                LinearProgressIndicator(value: _progress / 100, minHeight: 3),
 
-class _BottomNavBar extends StatelessWidget {
-  final bool canGoBack;
-  final bool isLoading;
-  final VoidCallback onBack;
-  final VoidCallback onForward;
-  final VoidCallback onRefresh;
-  final VoidCallback onHome;
-
-  const _BottomNavBar({
-    required this.canGoBack,
-    required this.isLoading,
-    required this.onBack,
-    required this.onForward,
-    required this.onRefresh,
-    required this.onHome,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 52,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade200)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded),
-            onPressed: canGoBack ? onBack : null,
-            tooltip: 'Back',
-          ),
-          IconButton(
-            icon: const Icon(Icons.arrow_forward_ios_rounded),
-            onPressed: onForward,
-            tooltip: 'Forward',
-          ),
-          IconButton(
-            icon: isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.refresh_rounded),
-            onPressed: onRefresh,
-            tooltip: 'Refresh',
-          ),
-          IconButton(
-            icon: const Icon(Icons.home_rounded),
-            onPressed: onHome,
-            tooltip: 'Home',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ErrorOverlay extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-
-  const _ErrorOverlay({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.white,
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.wifi_off_rounded,
-                  size: 72, color: Colors.grey.shade400),
-              const SizedBox(height: 20),
-              Text(
-                'Connection Problem',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey.shade600, height: 1.5),
-              ),
-              const SizedBox(height: 28),
-              ElevatedButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Try Again'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1A73E8),
-                  foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+              /// ERROR VIEW
+              if (_hasError)
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.wifi_off, size: 60),
+                      const SizedBox(height: 16),
+                      Text(_errorMessage),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _refresh,
+                        child: const Text("Retry"),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -500,179 +336,3 @@ class _ErrorOverlay extends StatelessWidget {
     );
   }
 }
-
-class _LoadingPlaceholder extends StatelessWidget {
-  const _LoadingPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const ColoredBox(
-      color: Colors.white,
-      child: Center(
-        child: CircularProgressIndicator(color: Color(0xFF1A73E8)),
-      ),
-    );
-  }
-}
-
-class _LogoutBanner extends StatelessWidget {
-  final VoidCallback onDismiss;
-  const _LogoutBanner({required this.onDismiss});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: const Color(0xFFFFF3CD),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Row(
-          children: [
-            const Icon(Icons.warning_amber_rounded,
-                color: Color(0xFF856404), size: 20),
-            const SizedBox(width: 8),
-            const Expanded(
-              child: Text(
-                'Session expired. You have been logged out.',
-                style: TextStyle(
-                    color: Color(0xFF856404), fontWeight: FontWeight.w500),
-              ),
-            ),
-            TextButton(
-              onPressed: onDismiss,
-              child: const Text('OK',
-                  style: TextStyle(color: Color(0xFF856404))),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Media Picker Sheet (iOS-style)
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _MediaPickerSheet extends StatelessWidget {
-  final bool isImage;
-  const _MediaPickerSheet({required this.isImage});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 8),
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            isImage ? 'Select Image' : 'Select File',
-            style: const TextStyle(
-                fontSize: 17, fontWeight: FontWeight.w600),
-          ),
-          const Divider(height: 24),
-          _SheetTile(
-            icon: Icons.camera_alt_rounded,
-            label: 'Camera',
-            onTap: () async {
-              final picker = ImagePicker();
-              final XFile? file = isImage
-                  ? await picker.pickImage(source: ImageSource.camera)
-                  : await picker.pickVideo(source: ImageSource.camera);
-              Navigator.of(context).pop(file != null ? [file.path] : <String>[]);
-            },
-          ),
-          _SheetTile(
-            icon: Icons.photo_library_rounded,
-            label: 'Gallery',
-            onTap: () async {
-              final picker = ImagePicker();
-              final XFile? file = isImage
-                  ? await picker.pickImage(source: ImageSource.gallery)
-                  : await picker.pickVideo(source: ImageSource.gallery);
-              Navigator.of(context).pop(file != null ? [file.path] : <String>[]);
-            },
-          ),
-          _SheetTile(
-            icon: Icons.folder_rounded,
-            label: 'Browse Files',
-            onTap: () async {
-              final result = await FilePicker.platform.pickFiles();
-              final path = result?.files.single.path;
-              Navigator.of(context)
-                  .pop(path != null ? [path] : <String>[]);
-            },
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () => Navigator.of(context).pop(<String>[]),
-                child: const Text('Cancel',
-                    style: TextStyle(fontSize: 16, color: Colors.red)),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
-      ),
-    );
-  }
-}
-
-class _SheetTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _SheetTile(
-      {required this.icon, required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A73E8).withOpacity(0.1),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(icon, color: const Color(0xFF1A73E8)),
-      ),
-      title: Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
-      trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-      onTap: onTap,
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Usage example (entry point)
-// ─────────────────────────────────────────────────────────────────────────────
-//
-//  Navigator.push(
-//    context,
-//    MaterialPageRoute(
-//      builder: (_) => AdminWebViewScreen(accessToken: 'your_token_here'),
-//    ),
-//  ).then((result) {
-//    if (result == 'logout') {
-//      // Navigate to your login screen
-//    }
-//  });
