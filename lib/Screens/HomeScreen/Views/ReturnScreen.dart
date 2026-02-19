@@ -60,8 +60,8 @@ class _ProcessReturnScreenState extends State<ProcessReturnScreen> {
   void _showStatusUpdateSheet() {
     if (Get.isBottomSheetOpen ?? false) return;
 
-    String? selectedStatus; // 'refunded' or 'rejected'
-    String? selectedMethod; // 'cash' or 'online'
+    String? selectedStatus; 
+    String? selectedMethod; 
     final TextEditingController reasonController = TextEditingController();
 
     Get.bottomSheet(

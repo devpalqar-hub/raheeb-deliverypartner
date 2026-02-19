@@ -6,7 +6,7 @@ import 'package:raheeb_deliverypartner/Screens/HomeScreen/Service/TrackingContro
 import 'package:raheeb_deliverypartner/Screens/TransferScreen/TransferScreen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class OrderDetailsScreen extends StatelessWidget {
+class OrderDetailsScreen extends StatefulWidget {
   final OrderModel order;
 
   const OrderDetailsScreen({super.key, required this.order});
@@ -23,19 +23,29 @@ class OrderDetailsScreen extends StatelessWidget {
   ];
 
   @override
+  State<OrderDetailsScreen> createState() => _OrderDetailsScreenState();
+}
+
+class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      print("Fetching tracking for order ${widget.order.id}");
+      Get.find<TrackingController>().fetchTracking(widget.order.id);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final OrderController orderController = Get.find<OrderController>();
-    final TrackingController trackingController =
-        Get.put(TrackingController());
-
-    /// ✅ fetch tracking once
-    trackingController.fetchTracking(order.id);
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
          backgroundColor: Colors.white,
-        title: Text("Order ${order.orderNumber}"),
+        title: Text("Order ${widget.order.orderNumber}"),
       ),
       body: GetBuilder<TrackingController>(
         builder: (trackCtrl) {
@@ -76,18 +86,18 @@ class OrderDetailsScreen extends StatelessWidget {
 
   /// ✅ find next status
   int currentIndex =
-      orderFlow.indexWhere((e) => e["status"] == currentStatus);
+      OrderDetailsScreen.orderFlow.indexWhere((e) => e["status"] == currentStatus);
 
-  bool isLastStep = currentIndex == orderFlow.length - 1;
+  bool isLastStep = currentIndex == OrderDetailsScreen.orderFlow.length - 1;
 
   String? nextStatus =
       !isLastStep && currentIndex != -1
-          ? orderFlow[currentIndex + 1]["status"]
+          ? OrderDetailsScreen.orderFlow[currentIndex + 1]["status"]
           : null;
 
   String? nextTitle =
       !isLastStep && currentIndex != -1
-          ? orderFlow[currentIndex + 1]["title"]
+          ? OrderDetailsScreen.orderFlow[currentIndex + 1]["title"]
           : null;
 
   return _cardContainer(
@@ -105,7 +115,7 @@ class OrderDetailsScreen extends StatelessWidget {
         const SizedBox(height: 16),
 
         /// ✅ Timeline Steps
-        ...orderFlow.asMap().entries.map((entry) {
+        ...OrderDetailsScreen.orderFlow.asMap().entries.map((entry) {
           final index = entry.key;
           final step = entry.value;
 
@@ -119,7 +129,7 @@ class OrderDetailsScreen extends StatelessWidget {
             subtitle: _getStepSubtitle(step["status"]!),
             isFirst: index == 0,
             isLast:
-                index == orderFlow.length - 1 &&
+                index == OrderDetailsScreen.orderFlow.length - 1 &&
                 !isFailed &&
                 !isReturned,
             isCompleted: isCompleted,
@@ -161,17 +171,18 @@ class OrderDetailsScreen extends StatelessWidget {
                 ),
               ),
               onPressed: () async {
-                await orderController.changeOrderStatus(
-                  orderId: order.id,
-                  status: nextStatus,
-                );
-                   int index = orderController.orders.indexWhere((o) => o.id == order.id);
-  if (index != -1) {
-    orderController.orders[index].status = nextStatus; // requires mutable status
-    orderController.update(); // refresh the GetBuilder in HomeScreen
-  }
-                /// refresh tracking
-                trackCtrl.fetchTracking(order.id);
+               await orderController.changeOrderStatus(
+  orderId: widget.order.id,
+  status: nextStatus,
+);
+
+/// ✅ Refresh tracking timeline
+await trackCtrl.fetchTracking(widget.order.id);
+
+/// ✅ VERY IMPORTANT — refresh orders list
+await orderController.fetchMyOrders();
+               
+                trackCtrl.fetchTracking(widget.order.id);
               },
               child: Text("Mark as $nextTitle"),
             ),
@@ -181,6 +192,7 @@ class OrderDetailsScreen extends StatelessWidget {
     ),
   );
 }
+
   bool _isStepCompleted(
       String status, TrackingController trackCtrl) {
     final currentStatus = trackCtrl.tracking?.data?.status;
@@ -188,10 +200,10 @@ class OrderDetailsScreen extends StatelessWidget {
     if (currentStatus == null) return false;
 
     final currentIndex =
-        orderFlow.indexWhere((e) => e["status"] == currentStatus);
+        OrderDetailsScreen.orderFlow.indexWhere((e) => e["status"] == currentStatus);
 
     final stepIndex =
-        orderFlow.indexWhere((e) => e["status"] == status);
+        OrderDetailsScreen.orderFlow.indexWhere((e) => e["status"] == status);
 
     if (currentIndex == -1 || stepIndex == -1) return false;
 
@@ -216,9 +228,10 @@ class OrderDetailsScreen extends StatelessWidget {
         return "";
     }
   }
+
 Widget _buildCustomerCard() {
-  final customer = order.customerProfile;
-  final shipping = order.shippingAddress;
+  final customer = widget.order.customerProfile;
+  final shipping = widget.order.shippingAddress;
 
   /// ✅ prefer shipping phone, fallback to profile phone
   final String phone =
@@ -316,7 +329,7 @@ Widget _buildCustomerCard() {
 }
 
   Widget _buildNextStepCard(OrderController orderController) {
-    bool isDelivered = order.tracking.status == "delivered";
+    bool isDelivered = widget.order.tracking.status == "delivered";
 
     return SizedBox(
       width: double.infinity,
@@ -334,7 +347,7 @@ Widget _buildCustomerCard() {
             ? null
             : () async {
                 await orderController.changeOrderStatus(
-                  orderId: order.id,
+                  orderId: widget.order.id,
                   status: "delivered",
                 );
               },
@@ -344,18 +357,16 @@ Widget _buildCustomerCard() {
     );
   }
 
-
  Widget _buildOrderSummaryCard() { 
   return _cardContainer( child: 
   Column( crossAxisAlignment: CrossAxisAlignment.start,
-   children: [ Text("${order.items.length} items"), 
-   const SizedBox(height: 12),
-    ...order.items.map((item) => Row(
+   children: [ Text("${widget.order.items.length} items"), 
+    SizedBox(height: 12),
+    ...widget.order.items.map((item) => Row(
        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [ Text("${item.quantity}x ${item.product.name}"), 
+        children: [ Text("${item.quantity}x ${item.product.name}", style: TextStyle(fontSize: 13)), 
        
          ], )), ], ), ); }
-
 
  Widget _buildIssueCard() {
    return _cardContainer(
@@ -372,8 +383,8 @@ Widget _buildCustomerCard() {
           const SizedBox(height: 12), 
           TextButton( onPressed: () { Get.to(
   () => TransferOrderScreen(
-    orderNumber: order.orderNumber,
-     orderId: order.id,    
+    orderNumber: widget.order.orderNumber,
+     orderId: widget.order.id,    
   ),
 ); }, 
           child: const Text("Transfer Order"), ) ], ), ); }

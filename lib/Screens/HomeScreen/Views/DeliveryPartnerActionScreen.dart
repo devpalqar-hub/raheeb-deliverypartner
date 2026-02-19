@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import '../Service/TrackingController.dart';
+import 'package:raheeb_deliverypartner/Screens/HomeScreen/Service/TrackingController.dart';
+import 'package:raheeb_deliverypartner/Screens/HomeScreen/Views/order_card.dart';
+import 'package:raheeb_deliverypartner/Screens/HomeScreen/Views/returnorder_card.dart';
+import 'package:raheeb_deliverypartner/Screens/orderdetails/order_details.dart';
 
 class DeliveryPartnerActionsScreen extends StatefulWidget {
   const DeliveryPartnerActionsScreen({super.key});
@@ -13,16 +16,19 @@ class DeliveryPartnerActionsScreen extends StatefulWidget {
 
 class _DeliveryPartnerActionsScreenState
     extends State<DeliveryPartnerActionsScreen> {
-  final TrackingController controller =
-      Get.put(TrackingController());
+
+  final TrackingController controller = Get.put(TrackingController());
+
+  /// ✅ Toggle state
+  bool showOrders = true;
 
   @override
   void initState() {
     super.initState();
 
-    /// ✅ fetch delivery actions
-    Future.microtask(() {
-      controller.fetchDeliveryActions();
+    Future.microtask(() async {
+      await controller.fetchMyOrders();
+      await controller.fetchReturns();
     });
   }
 
@@ -39,52 +45,161 @@ class _DeliveryPartnerActionsScreenState
 
       body: GetBuilder<TrackingController>(
         builder: (controller) {
+
           if (controller.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
 
           return RefreshIndicator(
-            onRefresh: () =>
-                controller.fetchDeliveryActions(),
-            child: ListView(
-              padding: EdgeInsets.all(16.w),
+            onRefresh: () async {
+              await controller.fetchMyOrders();
+              await controller.fetchReturns();
+            },
+
+            child: Column(
               children: [
 
-                /// ================= ORDERS =================
-                Text(
-                  "Orders",
-                  style: TextStyle(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.bold,
+                /// ================= TOGGLE =================
+                /// ================= TEXT TOGGLE =================
+Container(
+  padding: EdgeInsets.symmetric(vertical: 14.h),
+  margin: EdgeInsets.symmetric(horizontal: 16.w),
+  child: Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+
+      /// ORDERS
+      GestureDetector(
+        onTap: () {
+          if (!showOrders) {
+            setState(() => showOrders = true);
+          }
+        },
+        child: Column(
+          children: [
+            Text(
+              "Orders",
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+                color: showOrders
+                    ? const Color(0xff2F80ED)
+                    : Colors.grey,
+              ),
+            ),
+            SizedBox(height: 6.h),
+
+            /// underline indicator
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              height: 3,
+              width: showOrders ? 40.w : 0,
+              decoration: BoxDecoration(
+                color: const Color(0xff2F80ED),
+                borderRadius: BorderRadius.circular(10),
+              ),
+            )
+          ],
+        ),
+      ),
+
+      SizedBox(width: 40.w),
+
+      /// RETURNS
+      GestureDetector(
+        onTap: () {
+          if (showOrders) {
+            setState(() => showOrders = false);
+          }
+        },
+        child: Column(
+          children: [
+            Text(
+              "Returns",
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+                color: !showOrders
+                    ? const Color(0xff2F80ED)
+                    : Colors.grey,
+              ),
+            ),
+            SizedBox(height: 6.h),
+
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              height: 3,
+              width: !showOrders ? 40.w : 0,
+              decoration: BoxDecoration(
+                color: const Color(0xff2F80ED),
+                borderRadius: BorderRadius.circular(10),
+              ),
+            )
+          ],
+        ),
+      ),
+    ],
+  ),
+),
+
+                /// ================= LIST =================
+                Expanded(
+                  child: ListView(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w),
+
+                    children: [
+
+                      /// -------- ORDERS --------
+                      if (showOrders) ...[
+                        if (controller.filteredOrders.isEmpty)
+                          _emptyWidget("No Orders"),
+
+                        ...controller.filteredOrders.map((order) {
+                          final firstItem =
+                              order.items.isNotEmpty
+                                  ? order.items.first
+                                  : null;
+
+                          return OrderCard(
+                            title:
+                                firstItem?.product.name ?? "Order",
+                            orderId: order.orderNumber,
+                            branch: order.shippingAddress.city,
+                            pickup: order.shippingAddress.address,
+                            delivery:
+                                "${order.customerProfile.name} - ${order.customerProfile.phone}",
+                            earning: "₹${order.totalAmount}",
+                            status: order.status,
+
+                            /// ✅ no button
+                            buttonText: "View Details",
+                            onPressed: () { Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              OrderDetailsScreen(order: order),
+                                        ),
+                                      );}
+                          );
+                        }),
+                      ],
+
+                      /// -------- RETURNS --------
+                      if (!showOrders) ...[
+                        if (controller.filteredReturnOrders.isEmpty)
+                          _emptyWidget("No Returns"),
+
+                        ...controller.filteredReturnOrders.map((ret) {
+                          return ReturnOrderCard(
+                            returnOrder: ret,
+                          );
+                        }),
+                      ],
+
+                      SizedBox(height: 20.h),
+                    ],
                   ),
                 ),
-                SizedBox(height: 12.h),
-
-                if (controller.actionOrders.isEmpty)
-                  _emptyWidget("No Order Actions"),
-
-                ...controller.actionOrders
-                    .map((order) => _orderCard(order)),
-
-                SizedBox(height: 25.h),
-
-                /// ================= RETURNS =================
-                Text(
-                  "Returns",
-                  style: TextStyle(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 12.h),
-
-                if (controller.actionReturns.isEmpty)
-                  _emptyWidget("No Return Actions"),
-
-                ...controller.actionReturns
-                    .map((ret) => _returnCard(ret)),
               ],
             ),
           );
@@ -93,144 +208,10 @@ class _DeliveryPartnerActionsScreenState
     );
   }
 
-  /// =====================================================
-  /// ORDER CARD
-  /// =====================================================
-  Widget _orderCard(order) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 14.h),
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14.r),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 4)
-        ],
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.local_shipping,
-              color: Colors.green),
-
-          SizedBox(width: 12.w),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
-              children: [
-                Text(
-                  order.orderNumber,
-                  style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15.sp),
-                ),
-                SizedBox(height: 4.h),
-                Text(
-                  order.customerProfile.name,
-                  style: TextStyle(fontSize: 13.sp),
-                ),
-                SizedBox(height: 4.h),
-                Text(
-                  "Status : ${order.tracking.status}",
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          _statusChip(order.status),
-        ],
-      ),
-    );
-  }
-
-  /// =====================================================
-  /// RETURN CARD
-  /// =====================================================
-  Widget _returnCard(ret) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 14.h),
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14.r),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 4)
-        ],
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.assignment_return,
-              color: Colors.orange),
-
-          SizedBox(width: 12.w),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
-              children: [
-                Text(
-                  ret.order.orderNumber,
-                  style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15.sp),
-                ),
-                SizedBox(height: 4.h),
-                Text(
-                  ret.customerProfile.name,
-                  style: TextStyle(fontSize: 13.sp),
-                ),
-                SizedBox(height: 4.h),
-                Text(
-                  "Refund : ₹${ret.refundAmount}",
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          _statusChip(ret.status),
-        ],
-      ),
-    );
-  }
-
-  /// =====================================================
-  /// STATUS CHIP
-  /// =====================================================
-  Widget _statusChip(String status) {
-    return Container(
-      padding:
-          EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
-      decoration: BoxDecoration(
-        color: Colors.green.shade50,
-        borderRadius: BorderRadius.circular(20.r),
-      ),
-      child: Text(
-        status.replaceAll("_", " ").toUpperCase(),
-        style: TextStyle(
-          fontSize: 11.sp,
-          fontWeight: FontWeight.w600,
-          color: Colors.green,
-        ),
-      ),
-    );
-  }
-
-  /// =====================================================
-  /// EMPTY
-  /// =====================================================
+  /// EMPTY STATE
   Widget _emptyWidget(String text) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 20.h),
+      padding: EdgeInsets.symmetric(vertical: 40.h),
       child: Center(
         child: Text(
           text,

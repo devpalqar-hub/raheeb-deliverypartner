@@ -54,11 +54,11 @@ class OrderCard extends StatelessWidget {
                   Text(
                     title,
                     style:  TextStyle(
-                      fontSize: 14,
+                      fontSize: 13.sp,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                 
+                 SizedBox(height: 4.h),
                   Row(
                     children: [
                       Text(
@@ -68,10 +68,10 @@ class OrderCard extends StatelessWidget {
                           fontSize: 12,
                         ),
                       ),
-                      SizedBox(width: 80.w),
+                      SizedBox(width: 50.w),
                        Container(
                 padding:  EdgeInsets.symmetric(
-                  horizontal: 8.h,
+                  horizontal: 5.h,
                   vertical: 6.h,
                 ),
                 height: 25.h,
@@ -89,7 +89,7 @@ class OrderCard extends StatelessWidget {
                         ? Colors.blue
                         : Colors.orange,
                     fontWeight: FontWeight.bold,
-                    fontSize: 8.sp,
+                    fontSize: 10.sp,
                   ),
                 ),
               ),

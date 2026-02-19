@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
-import 'package:raheeb_deliverypartner/Screens/HomeScreen/Model/DeliveryActionModel.dart';
+
+import 'package:raheeb_deliverypartner/Screens/HomeScreen/Model/OrderModel.dart';
+import 'package:raheeb_deliverypartner/Screens/HomeScreen/Model/ReturnOrderModel.dart';
 import 'package:raheeb_deliverypartner/Screens/HomeScreen/Model/TrackingModel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -12,10 +14,17 @@ class TrackingController extends GetxController {
   final String baseUrl = "https://api.ecom.palqar.cloud/v1";
 
   String? currentOrderId;
-  DeliveryActionResponse? deliveryActions;
+ 
 
-  List<ActionOrder> actionOrders = [];
-  List<ActionReturn> actionReturns = [];
+  List<OrderModel> orders = [];
+List<OrderModel> filteredOrders = [];
+
+ List<ReturnOrder> returnOrders = [];
+  List<ReturnOrder> filteredReturnOrders = [];
+
+
+int currentPage = 1;
+bool hasMoreOrders = true;
 
   /// ==============================
   /// FETCH TRACKING DETAILS
@@ -193,19 +202,24 @@ class TrackingController extends GetxController {
     }
   }
 
-
-   Future<void> fetchDeliveryActions() async {
+Future<void> fetchMyOrders({
+    String? orderId,
+    int page = 1,
+    int limit = 10,
+  }) async {
     try {
-      isLoading = true;
+      if (page == 1) isLoading = true;
       update();
 
       final prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString("token");
+      final token = prefs.getString("token");
 
-      final url = "$baseUrl/delivery-partners/my/actions";
+      String url =
+          "$baseUrl/orders/delivery-partner/my-orders?page=$page&limit=$limit";
 
-      print("========== DELIVERY ACTION API ==========");
-      print("URL => $url");
+      if (orderId != null && orderId.isNotEmpty) {
+        url += "&orderId=$orderId";
+      }
 
       final response = await http.get(
         Uri.parse(url),
@@ -215,26 +229,88 @@ class TrackingController extends GetxController {
         },
       );
 
-      print("STATUS => ${response.statusCode}");
-      print("BODY => ${response.body}");
+      final data = jsonDecode(response.body);
 
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
+      if (response.statusCode == 200 && data["success"] == true) {
 
-        deliveryActions = DeliveryActionResponse.fromJson(decoded);
+        List<OrderModel> fetched =
+            (data["data"]["data"] as List)
+                .map((e) => OrderModel.fromJson(e))
+                .toList();
 
-        /// ✅ fill lists
-        actionOrders = deliveryActions?.data.orders ?? [];
-        actionReturns = deliveryActions?.data.returns ?? [];
+        if (page == 1) {
+          orders = fetched;
+        } else {
+          orders.addAll(fetched);
+        }
 
-        print("ORDERS COUNT => ${actionOrders.length}");
-        print("RETURNS COUNT => ${actionReturns.length}");
+        filteredOrders = List.from(orders);
+        hasMoreOrders = fetched.length == limit;
+        currentPage = page;
+
       } else {
-        Get.snackbar("Error", "Failed to fetch delivery actions");
+        Get.snackbar("Error", data["message"]);
       }
-    } catch (e, stack) {
-      print("DELIVERY ACTION ERROR => $e");
-      print(stack);
+    } catch (e) {
+      Get.snackbar("Error", e.toString());
+    } finally {
+      isLoading = false;
+      update();
+    }
+  }
+
+Future<void> fetchReturns({
+    String? orderId,
+    int page = 1,
+    int limit = 20,
+  }) async {
+
+    try {
+      isLoading = true;
+      update();
+
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null || token.isEmpty) {
+        Get.snackbar("Session Expired", "Please login again");
+        return;
+      }
+
+      String url =
+          "$baseUrl/returns/delivery-partner/my-returns?page=$page&limit=$limit";
+
+      if (orderId != null && orderId.isNotEmpty) {
+        url += "&orderId=$orderId";
+      }
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data["success"] == true) {
+
+        final List<dynamic> list =
+            data['data']?['data'] ?? [];
+
+        returnOrders = list
+            .map((e) => ReturnOrder.fromJson(e))
+            .toList();
+
+        filteredReturnOrders = List.from(returnOrders);
+
+      } else {
+        Get.snackbar(
+            "Error", data["message"] ?? "Failed to fetch returns");
+      }
+
+    } catch (e) {
       Get.snackbar("Error", e.toString());
     } finally {
       isLoading = false;

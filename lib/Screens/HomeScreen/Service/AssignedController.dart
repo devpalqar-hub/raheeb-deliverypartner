@@ -106,6 +106,8 @@ class OrderController extends GetxController {
     int page = 1,
     int limit = 10,
   }) async {
+     isLoading = true;
+  update();
     try {
       if (page == 1) {
         isLoading = true;
@@ -190,15 +192,26 @@ class OrderController extends GetxController {
 
         if (updateLocally) {
           // update local list immediately
-          int index = orders.indexWhere((o) => o.id == orderId);
-          if (index != -1) {
-            orders[index].status = status;
-            filteredOrders = orders;
-            update();
-          }
+        int index = orders.indexWhere((o) => o.id == orderId);
+
+if (index != -1) {
+  // create updated copy
+  final updatedOrder = orders[index].copyWith(
+    status: status,
+  );
+
+  // replace item (important)
+  orders[index] = updatedOrder;
+
+  // force new list reference
+  orders = List.from(orders);
+  filteredOrders = List.from(orders);
+
+  update();
+}
         } else {
-          // fetch fresh list from server
-          await fetchMyOrders(page: 1);
+        
+          await fetchMyOrders();
         }
 
         return true;
