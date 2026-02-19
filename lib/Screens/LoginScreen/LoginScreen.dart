@@ -33,26 +33,28 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
                 SizedBox(height: 40.h),
 
                 /// COMPANY LOGO
-                Container(
-                  height: 72.h,
-                  width: 72.h,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16.r),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(.05),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    Icons.local_shipping_outlined,
-                    size: 36.sp,
-                    color: const Color(0xff2F80ED),
-                  ),
-                ),
+              Container(
+  height: 92.h,
+  width: 92.h,
+  decoration: BoxDecoration(
+    color: Colors.white,
+    borderRadius: BorderRadius.circular(16.r),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withOpacity(.05),
+        blurRadius: 12,
+        offset: const Offset(0, 4),
+      ),
+    ],
+  ),
+  child: Padding(
+    padding: EdgeInsets.all(14.w),
+    child: Image.asset(
+      "assets/image.png", // ✅ change to your asset path
+      fit: BoxFit.contain,
+    ),
+  ),
+),
 
                 SizedBox(height: 24.h),
 
@@ -257,6 +259,7 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
                                     style: TextStyle(
                                       fontSize: 15.sp,
                                       fontWeight: FontWeight.w600,
+                                      color: Colors.white
                                     ),
                                   ),
                           ),
