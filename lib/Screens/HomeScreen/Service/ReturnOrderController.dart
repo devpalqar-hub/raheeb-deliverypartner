@@ -35,7 +35,7 @@ class ReturnOrderController extends GetxController {
     }
 
     /// 🔹 Build URL
-    String url = "$baseUrl/returns/delivery-partner/my-returns";
+    String url = "$baseUrl/returns/delivery-partner/my-returns?page=$page&limit=$limit";
 
     if (orderId != null && orderId.isNotEmpty) {
       url = "$url?orderId=$orderId";
@@ -143,12 +143,11 @@ class ReturnOrderController extends GetxController {
     return null;
   }
 
-  /// ---------------- UPDATE RETURN STATUS ----------------
- Future<bool> updateReturnStatus({
+  Future<bool> updateReturnStatus({
   required String returnId,
-  required String status,
+  required String status, // now use the status passed
   String? adminNotes,
-  required String returnPaymentMethod, // ✅ ADD THIS
+  required String returnPaymentMethod, // cash | online
 }) async {
   try {
     isLoading = true;
@@ -157,25 +156,20 @@ class ReturnOrderController extends GetxController {
     final prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString("token");
 
-    /// ✅ FORCE STATUS
-    const String fixedStatus = "picked_up";
+    if (token == null || token.isEmpty) {
+      Get.snackbar("Error", "User not authenticated");
+      return false;
+    }
 
-    /// ✅ Request Body
-    final bodyMap = {
-      "status": fixedStatus,
+    /// ✅ Use status passed instead of fixed "refunded"
+    final Map<String, dynamic> bodyMap = {
+      "status": status,
       "adminNotes": adminNotes ?? "Items collected successfully",
-      "returnPaymentMethod": returnPaymentMethod, // cash | online
+      "returnPaymentMethod": returnPaymentMethod,
     };
 
-    final body = json.encode(bodyMap);
-
-    final url =
-        Uri.parse('$baseUrl/returns/delivery-partner/$returnId/status');
-
-    print("===== UPDATE RETURN STATUS REQUEST =====");
-    print("URL: $url");
-    print("BODY: $body");
-    print("========================================");
+    final String body = json.encode(bodyMap);
+    final Uri url = Uri.parse('$baseUrl/returns/delivery-partner/$returnId/status');
 
     final response = await http.patch(
       url,
@@ -186,36 +180,27 @@ class ReturnOrderController extends GetxController {
       body: body,
     );
 
-    print("===== RESPONSE =====");
-    print("STATUS CODE: ${response.statusCode}");
-    print("BODY: ${response.body}");
-    print("====================");
-
     if (response.statusCode == 200) {
       /// ✅ Update local list
       int index = returnOrders.indexWhere((r) => r.id == returnId);
-
       if (index != -1) {
         returnOrders[index] = returnOrders[index].copyWith(
-          status: fixedStatus,
+          status: status,
           adminNotes: adminNotes,
           returnPaymentMethod: returnPaymentMethod,
         );
         update();
       }
 
-      Get.snackbar("Success", "Return marked as Picked Up");
+      Get.snackbar("Success", "Return marked as $status");
       return true;
     } else {
       final data = jsonDecode(response.body);
-      Get.snackbar(
-        "Error",
-        data["message"] ?? "Failed to update return status",
-      );
+      Get.snackbar("Error", data["message"] ?? "Failed to update return status");
     }
   } catch (e) {
-    print("Error updating return status: $e");
     Get.snackbar("Error", "Failed to update return status");
+    print("Exception updating return: $e");
   } finally {
     isLoading = false;
     update();

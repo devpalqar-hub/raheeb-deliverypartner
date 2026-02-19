@@ -9,61 +9,64 @@ import 'package:shared_preferences/shared_preferences.dart';
 class OrderController extends GetxController {
   bool isLoading = false;
   List<OrderModel> orders = [];
+  List<OrderModel> filteredOrders = [];
 
-  // ================= ANALYTICS =================
-  Map<String, dynamic> summary = {};
-  Map<String, dynamic> partner = {};
-  Map<String, dynamic> dateRange = {};
-  List<dynamic> recentOrders = [];
-  /// ================= DELIVERY PARTNERS =================
   List<DeliveryPartnerModel> deliveryPartners = [];
   List<DeliveryPartnerModel> filteredPartners = [];
   bool isPartnerLoading = false;
 
-  final TextEditingController searchController =
-      TextEditingController();
-  List<OrderModel> filteredOrders = [];
+  Map<String, dynamic> summary = {};
+  Map<String, dynamic> partner = {};
+  Map<String, dynamic> dateRange = {};
+  List<dynamic> recentOrders = [];
 
-final TextEditingController orderSearchController =
-    TextEditingController();
-
+  final TextEditingController searchController = TextEditingController();
+  final TextEditingController orderSearchController = TextEditingController();
 
   final String baseUrl = "https://api.ecom.palqar.cloud/v1";
 
+  int currentPage = 1;
+  int limit = 10;
+  bool hasMoreOrders = true;
+
   @override
   void onInit() {
-    fetchMyOrders();
-    fetchAnalytics(); 
-     fetchDeliveryPartners(); 
     super.onInit();
+    fetchMyOrders(page: 1);
+    fetchAnalytics();
+    fetchDeliveryPartners();
   }
 
- void searchPartners(String query) {
+  // ================= SEARCH ORDERS =================
+  void searchOrders(String query) {
+    if (query.isEmpty) {
+      filteredOrders = orders;
+    } else {
+      filteredOrders = orders.where((order) {
+        return order.orderNumber
+            .toLowerCase()
+            .contains(query.toLowerCase());
+      }).toList();
+    }
+    update();
+  }
+
+  // ================= SEARCH PARTNERS =================
+  void searchPartners(String query) {
     if (query.isEmpty) {
       filteredPartners = deliveryPartners;
     } else {
       filteredPartners = deliveryPartners.where((p) {
         final name = (p.name ?? "").toLowerCase();
         final email = (p.email ?? "").toLowerCase();
-
         return name.contains(query.toLowerCase()) ||
             email.contains(query.toLowerCase());
       }).toList();
     }
     update();
   }
-void searchOrders(String query) {
-  if (query.isEmpty) {
-    filteredOrders = orders;
-  } else {
-    filteredOrders = orders.where((order) {
-      return order.orderNumber
-          .toLowerCase()
-          .contains(query.toLowerCase());
-    }).toList();
-  }
-  update();
-}
+
+  // ================= FETCH DELIVERY PARTNERS =================
   Future<void> fetchDeliveryPartners() async {
     try {
       isPartnerLoading = true;
@@ -83,12 +86,8 @@ void searchOrders(String query) {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200 && data["success"] == true) {
-        List list = data["data"];
-
         deliveryPartners =
-            list.map((e) => DeliveryPartnerModel.fromJson(e)).toList();
-
-        /// ✅ INITIAL LIST
+            (data["data"] as List).map((e) => DeliveryPartnerModel.fromJson(e)).toList();
         filteredPartners = deliveryPartners;
       } else {
         Get.snackbar("Error", "Failed to load partners");
@@ -100,138 +99,120 @@ void searchOrders(String query) {
       update();
     }
   }
-  /// ================= FETCH ORDERS =================
-Future<void> fetchMyOrders({String? orderId, int page = 1, int limit = 10}) async {
-  try {
-    isLoading = true;
-    update();
 
-    final prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString("token");
-
-    /// ✅ Build URL dynamically with pagination
-    String url = "$baseUrl/orders/delivery-partner/my-orders?page=$page&limit=$limit";
-
-    if (orderId != null && orderId.isNotEmpty) {
-      url = "$url&orderId=$orderId";
-    }
-
-    print("FETCH ORDERS URL => $url");
-
-    final response = await http.get(
-      Uri.parse(url),
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-      },
-    );
-
-    print("STATUS CODE => ${response.statusCode}");
-    print("RAW RESPONSE => ${response.body}");
-
-    final data = jsonDecode(response.body);
-
-    if (response.statusCode == 200 && data["success"] == true) {
-      List list = data["data"]["data"];
-
-      List<OrderModel> fetchedOrders = list.map((e) => OrderModel.fromJson(e)).toList();
-
-      /// ✅ Append to existing list for pagination
+  // ================= FETCH ORDERS WITH PAGINATION =================
+  Future<void> fetchMyOrders({String? orderId, int page = 1, int limit = 10}) async {
+    try {
       if (page == 1) {
-        orders = fetchedOrders;
-      } else {
-        orders.addAll(fetchedOrders);
+        isLoading = true;
+      }
+      update();
+
+      final prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString("token");
+
+      String url = "$baseUrl/orders/delivery-partner/my-orders?page=$page&limit=$limit";
+      if (orderId != null && orderId.isNotEmpty) {
+        url += "&orderId=$orderId";
       }
 
-      /// ✅ keep filtered list synced (for search)
-      filteredOrders = orders;
-    } else {
-      Get.snackbar("Error", data["message"] ?? "Failed to load orders");
-    }
-  } catch (e, stack) {
-    print("ORDER ERROR => $e");
-    print(stack);
-    Get.snackbar("Error", e.toString());
-  } finally {
-    isLoading = false;
-    update();
-  }
-}
-  /// ================= CHANGE ORDER STATUS =================
- Future<bool> changeOrderStatus({
-  required String orderId,
-  required String status,
-}) async {
-  try {
-    isLoading = true;
-    update();
-
-    final prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString("token");
-
-    final url = "$baseUrl/orders/delivery/$orderId/status";
-
-    final bodyMap = {
-      "status": status,
-      "paymentStatus": "completed",
-    };
-
-    final body = jsonEncode(bodyMap);
-
-    /// ================= DEBUG REQUEST =================
-    print("========== STATUS UPDATE REQUEST ==========");
-    print("URL => $url");
-    print("TOKEN => $token");
-    print("BODY MAP => $bodyMap");
-    print("BODY JSON => $body");
-
-    final response = await http.patch(
-      Uri.parse(url),
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-      },
-      body: body,
-    );
-
-    /// ================= DEBUG RESPONSE =================
-    print("========== STATUS UPDATE RESPONSE ==========");
-    print("STATUS CODE => ${response.statusCode}");
-    print("RAW BODY => ${response.body}");
-
-    final data = jsonDecode(response.body);
-
-    print("DECODED RESPONSE => $data");
-    print("SUCCESS FIELD => ${data["success"]}");
-    print("MESSAGE FIELD => ${data["message"]}");
-
-    if (response.statusCode == 200 && data["success"] == true) {
-      Get.snackbar("Success", "Order status updated to $status");
-
-      /// refresh orders
-      await fetchMyOrders();
-
-      return true;
-    } else {
-      Get.snackbar(
-        "Error",
-        data["message"] ?? "Failed to update status",
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
       );
-      return false;
-    }
-  } catch (e, stack) {
-    print("========== STATUS ERROR ==========");
-    print("ERROR => $e");
-    print("STACK => $stack");
 
-    Get.snackbar("Error", e.toString());
-    return false;
-  } finally {
-    isLoading = false;
-    update();
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data["success"] == true) {
+        List<OrderModel> fetchedOrders = (data["data"]["data"] as List)
+            .map((e) => OrderModel.fromJson(e))
+            .toList();
+
+        if (page == 1) {
+          orders = fetchedOrders;
+        } else {
+          orders.addAll(fetchedOrders);
+        }
+
+        filteredOrders = orders;
+        hasMoreOrders = fetchedOrders.length == limit;
+        currentPage = page;
+      } else {
+        Get.snackbar("Error", data["message"] ?? "Failed to load orders");
+      }
+    } catch (e, stack) {
+      print("ORDER ERROR => $e");
+      print(stack);
+      Get.snackbar("Error", e.toString());
+    } finally {
+      isLoading = false;
+      update();
+    }
   }
-}
-  /// ================= FETCH ANALYTICS =================
+
+  // ================= CHANGE ORDER STATUS =================
+  Future<bool> changeOrderStatus({
+    required String orderId,
+    required String status,
+    bool updateLocally = true,
+  }) async {
+    try {
+      isLoading = true;
+      update();
+
+      final prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString("token");
+
+      final url = "$baseUrl/orders/delivery/$orderId/status";
+      final body = jsonEncode({"status": status, "paymentStatus": "completed"});
+
+      final response = await http.patch(
+        Uri.parse(url),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: body,
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data["success"] == true) {
+        Get.snackbar("Success", "Order status updated to $status");
+
+        if (updateLocally) {
+          // update local list immediately
+          int index = orders.indexWhere((o) => o.id == orderId);
+          if (index != -1) {
+            orders[index].status = status;
+            filteredOrders = orders;
+            update();
+          }
+        } else {
+          // fetch fresh list from server
+          await fetchMyOrders(page: 1);
+        }
+
+        return true;
+      } else {
+        Get.snackbar("Error", data["message"] ?? "Failed to update status");
+        return false;
+      }
+    } catch (e, stack) {
+      print("STATUS UPDATE ERROR => $e");
+      print(stack);
+      Get.snackbar("Error", e.toString());
+      return false;
+    } finally {
+      isLoading = false;
+      update();
+    }
+  }
+
+  // ================= FETCH ANALYTICS =================
   Future<void> fetchAnalytics() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -252,7 +233,7 @@ Future<void> fetchMyOrders({String? orderId, int page = 1, int limit = 10}) asyn
         summary = data["data"]["summary"] ?? {};
         dateRange = data["data"]["dateRange"] ?? {};
         recentOrders = data["data"]["recentOrders"] ?? [];
-        update(); // update UI after fetching analytics
+        update();
       } else {
         Get.snackbar("Error", "Failed to load analytics");
       }
@@ -262,74 +243,49 @@ Future<void> fetchMyOrders({String? orderId, int page = 1, int limit = 10}) asyn
     }
   }
 
-/// ================= FETCH DELIVERY PARTNERS =================
+  // ================= ASSIGN DELIVERY PARTNER =================
+  Future<bool> assignDeliveryPartner({
+    required String orderId,
+    required String deliveryPartnerId,
+    String notes = "",
+  }) async {
+    try {
+      isLoading = true;
+      update();
 
-/// ================= ASSIGN DELIVERY PARTNER =================
-Future<bool> assignDeliveryPartner({
-  required String orderId,
-  required String deliveryPartnerId,
-  String notes = "",
-}) async {
-  try {
-    isLoading = true;
-    update();
+      final prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString("token");
 
-    final prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString("token");
+      final url = "$baseUrl/orders/$orderId/assign-delivery-partner";
+      final body = jsonEncode({"deliveryPartnerId": deliveryPartnerId, "notes": notes});
 
-    final url =
-        "$baseUrl/orders/$orderId/assign-delivery-partner";
-
-    final bodyMap = {
-      "deliveryPartnerId": deliveryPartnerId,
-      "notes": notes,
-    };
-
-    final body = jsonEncode(bodyMap);
-
-    /// ===== DEBUG REQUEST =====
-    print("========== ASSIGN DELIVERY PARTNER REQUEST ==========");
-    print("URL => $url");
-    print("TOKEN => $token");
-    print("BODY => $bodyMap");
-
-    final response = await http.patch(
-      Uri.parse(url),
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-      },
-      body: body,
-    );
-
-    /// ===== DEBUG RESPONSE =====
-    print("STATUS CODE => ${response.statusCode}");
-    print("RAW RESPONSE => ${response.body}");
-
-    final data = jsonDecode(response.body);
-
-    if (response.statusCode == 200 && data["success"] == true) {
-      Get.snackbar("Success", "Delivery partner assigned successfully");
-
-      /// refresh orders list
-      await fetchMyOrders();
-
-      return true;
-    } else {
-      Get.snackbar(
-        "Error",
-        data["message"] ?? "Failed to assign delivery partner",
+      final response = await http.patch(
+        Uri.parse(url),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: body,
       );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data["success"] == true) {
+        Get.snackbar("Success", "Delivery partner assigned successfully");
+        await fetchMyOrders(page: 1); // refresh orders list
+        return true;
+      } else {
+        Get.snackbar("Error", data["message"] ?? "Failed to assign delivery partner");
+        return false;
+      }
+    } catch (e, stack) {
+      print("ASSIGN PARTNER ERROR => $e");
+      print(stack);
+      Get.snackbar("Error", e.toString());
       return false;
+    } finally {
+      isLoading = false;
+      update();
     }
-  } catch (e, stack) {
-    print("ASSIGN PARTNER ERROR => $e");
-    print(stack);
-    Get.snackbar("Error", e.toString());
-    return false;
-  } finally {
-    isLoading = false;
-    update();
   }
-}
 }

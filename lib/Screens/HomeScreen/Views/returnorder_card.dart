@@ -158,7 +158,7 @@ void _openMap(String address) async {
                             ),
                             SizedBox(height: 2.h),
                             Text(
-                              "Order: ${returnOrder.order.orderNumber} • ₹${returnOrder.order.totalAmount}",
+                              "Order: ${returnOrder.order.orderNumber}       Price: QAR ${returnOrder.order.totalAmount}",
                               style: TextStyle(
                                 fontSize: 13.sp,
                                 color: Colors.grey,
@@ -169,7 +169,7 @@ void _openMap(String address) async {
                       ),
 
                       /// CALL ICON
-                      GestureDetector(
+                      GestureDetector( 
                         onTap: () => _callCustomer(returnOrder.customerProfile.phone),
                         child: CircleAvatar(
                           radius: 18.r,

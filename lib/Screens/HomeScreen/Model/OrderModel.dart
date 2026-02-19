@@ -1,7 +1,7 @@
 class OrderModel {
   final String id;
   final String orderNumber;
-  final String status;
+ String status;
   final String paymentStatus;
   final String paymentMethod;
   final String totalAmount;

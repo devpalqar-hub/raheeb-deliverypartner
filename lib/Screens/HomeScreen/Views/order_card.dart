@@ -58,22 +58,24 @@ class OrderCard extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "$orderId • $branch",
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-
-              Container(
+                 
+                  Row(
+                    children: [
+                      Text(
+                        "$orderId • $branch",
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 12,
+                        ),
+                      ),
+                      SizedBox(width: 80.w),
+                       Container(
                 padding:  EdgeInsets.symmetric(
                   horizontal: 8.h,
                   vertical: 6.h,
                 ),
+                height: 25.h,
+                //width: 15.w,
                 decoration: BoxDecoration(
                   color: status == "ASSIGNED"
                       ? Colors.blue.shade50
@@ -87,17 +89,23 @@ class OrderCard extends StatelessWidget {
                         ? Colors.blue
                         : Colors.orange,
                     fontWeight: FontWeight.bold,
-                    fontSize: 10.sp,
+                    fontSize: 8.sp,
                   ),
                 ),
               ),
+                    ],
+                  ),
+                ],
+              ),
+             
+             
             ],
           ),
 
-          const SizedBox(height: 16),
+           SizedBox(height: 16),
 
 
-          const Text(
+           Text(
             "PICK UP",
             style: TextStyle(
               fontSize: 11,

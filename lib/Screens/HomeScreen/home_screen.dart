@@ -297,8 +297,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                     pickup: "Warehouse Pickup",
                                     delivery:
                                         "${order.shippingAddress.address}, ${order.shippingAddress.city}",
-                                    earning: "₹${order.totalAmount}",
-                                    status: order.status.toUpperCase(),
+                                    earning: "QAR ${order.totalAmount}",
+                                    status: order.tracking?.status.toUpperCase() ?? order.status.toUpperCase(),
                                     buttonText: "View Details",
                                     onPressed: () {
                                       Navigator.push(
@@ -327,7 +327,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       return Column(
                         children: controller.filteredReturnOrders
                             .map((returnOrder) => Padding(
-                                  padding: EdgeInsets.only(bottom: 14.h),
+                                  padding: EdgeInsets.fromLTRB(16.w ,10.h,16.w,14.h),
                                   child: ReturnOrderCard(returnOrder: returnOrder),
                                 ))
                             .toList(),

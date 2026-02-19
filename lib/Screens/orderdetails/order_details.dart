@@ -165,7 +165,11 @@ class OrderDetailsScreen extends StatelessWidget {
                   orderId: order.id,
                   status: nextStatus,
                 );
-
+                   int index = orderController.orders.indexWhere((o) => o.id == order.id);
+  if (index != -1) {
+    orderController.orders[index].status = nextStatus; // requires mutable status
+    orderController.update(); // refresh the GetBuilder in HomeScreen
+  }
                 /// refresh tracking
                 trackCtrl.fetchTracking(order.id);
               },
@@ -349,7 +353,7 @@ Widget _buildCustomerCard() {
     ...order.items.map((item) => Row(
        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [ Text("${item.quantity}x ${item.product.name}"), 
-        Text("₹${order.totalAmount}")
+       
          ], )), ], ), ); }
 
 
