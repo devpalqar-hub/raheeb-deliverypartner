@@ -208,7 +208,31 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                     ),
                   ),
-
+                    
+                    Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 48.h,
+                    child: ElevatedButton(
+                      onPressed: _showChangeStatusSheet,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xff2F80ED),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                      ),
+                      child: Text(
+                        "Change Status",
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
                   /// ================= TOGGLE =================
                   Container(
                     margin: EdgeInsets.all(16.w),
@@ -397,6 +421,207 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+void _showChangeStatusSheet() {
+
+  const List<String> backendStatuses = [
+    "order_placed",
+    "processing",
+    "ready_to_ship",
+    "shipped",
+    "in_transit",
+    "out_for_delivery",
+    "delivered",
+    "failed_delivery",
+    "returned",
+  ];
+
+  String? selectedCurrent;
+  String? selectedNew;
+
+  Get.bottomSheet(
+    StatefulBuilder(
+      builder: (context, setState) {
+        return Container(
+          padding: EdgeInsets.all(16.w),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius:
+                BorderRadius.vertical(top: Radius.circular(18.r)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+
+              /// ===== TITLE =====
+              Text(
+                "Change Status for Orders",
+                style: TextStyle(
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xff101828),
+                ),
+              ),
+
+              SizedBox(height: 16.h),
+
+              /// ===== CURRENT STATUS =====
+              DropdownButtonFormField<String>(
+                decoration: InputDecoration(
+                  labelText: "Current Status",
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12.w, vertical: 10.h),
+                ),
+                value: selectedCurrent,
+                items: backendStatuses
+                    .map(
+                      (s) => DropdownMenuItem(
+                        value: s,
+                        child: Text(s.toUpperCase()),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (val) {
+                  setState(() {
+                    selectedCurrent = val;
+                  });
+                },
+              ),
+
+              SizedBox(height: 12.h),
+
+              /// ===== NEW STATUS =====
+              DropdownButtonFormField<String>(
+                decoration: InputDecoration(
+                  labelText: "New Status",
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12.w, vertical: 10.h),
+                ),
+                value: selectedNew,
+                items: backendStatuses
+                    .map(
+                      (s) => DropdownMenuItem(
+                        value: s,
+                        child: Text(s.toUpperCase()),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (val) {
+                  setState(() {
+                    selectedNew = val;
+                  });
+                },
+              ),
+
+              SizedBox(height: 20.h),
+
+              /// ===== APPLY BUTTON =====
+              SizedBox(
+                width: double.infinity,
+                height: 48.h,
+                child: ElevatedButton(
+                  onPressed:
+                      selectedCurrent != null && selectedNew != null
+                          ? () async {
+
+                              /// Get all order IDs
+                              List<String> allOrderIds =
+                                  selectedTab == 0
+                                      ? orderController.orders
+                                          .map((e) => e.id)
+                                          .toList()
+                                      : returnOrderController.returnOrders
+                                          .map((e) => e.orderId)
+                                          .toList();
+
+                              if (allOrderIds.isEmpty) {
+                                Get.snackbar(
+                                    "Error", "No orders to update");
+                                return;
+                              }
+
+                              /// Filter by selected CURRENT status
+                              List<String> orderIdsToUpdate = [];
+
+                              if (selectedTab == 0) {
+                                orderIdsToUpdate =
+                                    orderController.orders
+                                        .where((o) =>
+                                            o.status ==
+                                            selectedCurrent)
+                                        .map((e) => e.id)
+                                        .toList();
+                              } else {
+                                orderIdsToUpdate =
+                                    returnOrderController.returnOrders
+                                        .where((o) =>
+                                            o.status ==
+                                            selectedCurrent)
+                                        .map((e) => e.orderId)
+                                        .toList();
+                              }
+
+                              if (orderIdsToUpdate.isEmpty) {
+                                Get.snackbar(
+                                  "Info",
+                                  "No orders match the selected current status",
+                                );
+                                return;
+                              }
+
+                              /// API CALL
+                              bool success =
+                                  await trackingController
+                                      .changeBulkOrderStatus(
+                                orderIds: orderIdsToUpdate,
+                                status: selectedNew!,
+                              );
+
+                              if (success) {
+
+                                /// Refresh lists
+                                if (selectedTab == 0) {
+                                  orderController.fetchMyOrders();
+                                } else {
+                                  returnOrderController.fetchReturns();
+                                }
+
+                                Get.back();
+                              }
+                            }
+                          : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xff1E5CC6),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                  ),
+                  child: Text(
+                    "Apply",
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+
+              SizedBox(height: 12.h),
+            ],
+          ),
+        );
+      },
+    ),
+  );
 }
+}
+
 class PerformanceCard extends StatelessWidget { final IconData icon; final Color iconColor; final int count; final String label; const PerformanceCard({ super.key, required this.icon, required this.iconColor, required this.count, required this.label, }); @override Widget build(BuildContext context) { return Container( padding: EdgeInsets.all(16.w), margin: EdgeInsets.only(bottom: 8.h), decoration: BoxDecoration( color: Colors.white, borderRadius: BorderRadius.circular(16.r), boxShadow: [ BoxShadow( color: Colors.black.withOpacity(0.05), blurRadius: 10.r, ), ], ), child: Column( children: [ CircleAvatar( radius: 20.r, backgroundColor: iconColor.withOpacity(0.15), child: Icon(icon, color: iconColor, size: 20.sp), ), SizedBox(height: 10.h), Text( "$count", style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold), ), SizedBox(height: 4.h), Text( label, style: TextStyle(fontSize: 12.sp, color: Colors.grey), ), ], ), ); } } // ================= LOGOUT SHEET ================= 
 void _showLogoutSheet() { Get.bottomSheet( Container( padding: EdgeInsets.all(20.w), decoration: BoxDecoration( color: Colors.white, borderRadius: BorderRadius.vertical( top: Radius.circular(18.r), ), ), child: Column( mainAxisSize: MainAxisSize.min, children: [ Container( height: 4.h, width: 40.w, margin: EdgeInsets.only(bottom: 16.h), decoration: BoxDecoration( color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10.r), ), ), Text( "Account", style: TextStyle( fontSize: 18.sp, fontWeight: FontWeight.bold, ), ), SizedBox(height: 20.h), ListTile( leading: Icon(Icons.logout, color: Colors.red, size: 22.sp), title: Text( "Logout", style: TextStyle( fontSize: 15.sp, fontWeight: FontWeight.w600, color: Colors.red, ), ), onTap: () async { final prefs = await SharedPreferences.getInstance(); await prefs.clear(); Get.offAll(() => const EmailLoginScreen()); }, ), SizedBox(height: 10.h), ], ), ), ); }

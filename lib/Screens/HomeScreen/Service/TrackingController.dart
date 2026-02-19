@@ -247,6 +247,8 @@ Future<void> fetchMyOrders({
         filteredOrders = List.from(orders);
         hasMoreOrders = fetched.length == limit;
         currentPage = page;
+         await fetchMyOrders();
+         await fetchReturns();
 
       } else {
         Get.snackbar("Error", data["message"]);
