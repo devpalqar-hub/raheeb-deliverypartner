@@ -17,8 +17,12 @@ class ReturnOrderController extends GetxController {
     super.onInit();
   }
 
-  Future<void> fetchReturns({String? orderId,int page = 1, int limit = 20}) async {
-  try {
+  Future<void> fetchReturns({
+    String? orderId,
+    int page = 1,
+    int limit = 20,
+  }) async {
+    //  try {
     isLoading = true;
     update();
 
@@ -35,7 +39,8 @@ class ReturnOrderController extends GetxController {
     }
 
     /// 🔹 Build URL
-    String url = "$baseUrl/returns/delivery-partner/my-returns?page=$page&limit=$limit";
+    String url =
+        "$baseUrl/returns/delivery-partner/my-returns?page=$page&limit=$limit&status=pending";
 
     if (orderId != null && orderId.isNotEmpty) {
       url = "$url?orderId=$orderId";
@@ -64,15 +69,13 @@ class ReturnOrderController extends GetxController {
     if (response.statusCode == 200 && data["success"] == true) {
       final List<dynamic> list = data['data']?['data'] ?? [];
 
-      print("📊 API DATA LENGTH => ${list.length}");
-
       /// ✅ Clear old list
       returnOrders.clear();
 
       /// ✅ Parse model
       returnOrders.addAll(
         list.map((e) {
-          print("➡️ Parsing Order ID: ${e['_id']}");
+          //  print("➡️ Parsing Order ID: ${e['_id']}");
           return ReturnOrder.fromJson(e);
         }).toList(),
       );
@@ -83,23 +86,20 @@ class ReturnOrderController extends GetxController {
       print("✅ Parsed Return Orders Count => ${returnOrders.length}");
     } else {
       print("❌ API ERROR => ${data["message"]}");
-
-      Get.snackbar(
-        "Error",
-        data["message"] ?? "Failed to fetch return orders",
-      );
+      Get.snackbar("Error", data["message"] ?? "Failed to fetch return orders");
     }
-  } catch (e, stack) {
-    print("🚨 RETURN ERROR => $e");
-    print("STACK TRACE => $stack");
+    // } catch (e, stack) {
+    //   print("🚨 RETURN ERROR => $e");
+    //   print("STACK TRACE => $stack");
 
-    Get.snackbar("Error", "Failed to fetch return orders");
-  } finally {
+    //   Get.snackbar("Error", "Failed to fetch return orders");
+    // }
+
     isLoading = false;
     update();
     print("========== FETCH RETURNS END ==========");
   }
-}
+
   /// ---------------- FETCH RETURN BY ID ----------------
   Future<ReturnOrder?> fetchReturnById(String id) async {
     try {
@@ -128,7 +128,9 @@ class ReturnOrderController extends GetxController {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final returnOrder = ReturnOrder.fromJson(data['data']);
-        print("Fetched Return Order: ${returnOrder.orderId}, Status: ${returnOrder.status}");
+        print(
+          "Fetched Return Order: ${returnOrder.orderId}, Status: ${returnOrder.status}",
+        );
         return returnOrder;
       } else {
         Get.snackbar("Error", "Failed to fetch return order by ID");
@@ -144,67 +146,73 @@ class ReturnOrderController extends GetxController {
   }
 
   Future<bool> updateReturnStatus({
-  required String returnId,
-  required String status, // now use the status passed
-  String? adminNotes,
-  required String returnPaymentMethod, // cash | online
-}) async {
-  try {
-    isLoading = true;
-    update();
+    required String returnId,
+    required String status, // now use the status passed
+    String? adminNotes,
+    required String returnPaymentMethod, // cash | online
+  }) async {
+    try {
+      isLoading = true;
+      update();
 
-    final prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString("token");
+      final prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString("token");
 
-    if (token == null || token.isEmpty) {
-      Get.snackbar("Error", "User not authenticated");
-      return false;
-    }
-
-    /// ✅ Use status passed instead of fixed "refunded"
-    final Map<String, dynamic> bodyMap = {
-      "status": status,
-      "adminNotes": adminNotes ?? "Items collected successfully",
-      "returnPaymentMethod": returnPaymentMethod,
-    };
-
-    final String body = json.encode(bodyMap);
-    final Uri url = Uri.parse('$baseUrl/returns/delivery-partner/$returnId/status');
-
-    final response = await http.patch(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-      },
-      body: body,
-    );
-
-    if (response.statusCode == 200) {
-      /// ✅ Update local list
-      int index = returnOrders.indexWhere((r) => r.id == returnId);
-      if (index != -1) {
-        returnOrders[index] = returnOrders[index].copyWith(
-          status: status,
-          adminNotes: adminNotes,
-          returnPaymentMethod: returnPaymentMethod,
-        );
-        update();
+      if (token == null || token.isEmpty) {
+        Get.snackbar("Error", "User not authenticated");
+        return false;
       }
 
-      Get.snackbar("Success", "Return marked as $status");
-      return true;
-    } else {
-      final data = jsonDecode(response.body);
-      Get.snackbar("Error", data["message"] ?? "Failed to update return status");
-    }
-  } catch (e) {
-    Get.snackbar("Error", "Failed to update return status");
-    print("Exception updating return: $e");
-  } finally {
-    isLoading = false;
-    update();
-  }
+      /// ✅ Use status passed instead of fixed "refunded"
+      final Map<String, dynamic> bodyMap = {
+        "status": status,
+        "adminNotes": adminNotes ?? "Items collected successfully",
+        "returnPaymentMethod": returnPaymentMethod,
+      };
 
-  return false;
-}}
+      final String body = json.encode(bodyMap);
+      final Uri url = Uri.parse(
+        '$baseUrl/returns/delivery-partner/$returnId/status',
+      );
+
+      final response = await http.patch(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: body,
+      );
+
+      if (response.statusCode == 200) {
+        /// ✅ Update local list
+        int index = returnOrders.indexWhere((r) => r.id == returnId);
+        if (index != -1) {
+          returnOrders[index] = returnOrders[index].copyWith(
+            status: status,
+            adminNotes: adminNotes,
+            returnPaymentMethod: returnPaymentMethod,
+          );
+          update();
+        }
+
+        Get.snackbar("Success", "Return marked as $status");
+        return true;
+      } else {
+        final data = jsonDecode(response.body);
+        Get.snackbar(
+          "Error",
+          data["message"] ?? "Failed to update return status",
+        );
+      }
+    } catch (e) {
+      Get.snackbar("Error", "Failed to update return status");
+      print("Exception updating return: $e");
+    } finally {
+      isLoading = false;
+      update();
+    }
+
+    return false;
+  }
+}

@@ -17,63 +17,58 @@ class AnalyticsController extends GetxController {
   }
 
   Future<void> fetchAnalytics() async {
-    try {
-      isLoading = true;
-      update();
+    //  try {
+    isLoading = true;
+    update();
 
-      final prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString("token");
+    final prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString("token");
 
-      /// ✅ PRINT REQUEST DETAILS
-      final url =
-          "$baseUrl/delivery-partners/analytics/stats";
+    /// ✅ PRINT REQUEST DETAILS
+    final url = "$baseUrl/delivery-partners/analytics/stats";
 
-      print("========== ANALYTICS API REQUEST ==========");
-      print("URL => $url");
-      print("TOKEN => $token");
+    print("========== ANALYTICS API REQUEST ==========");
+    print("URL => $url");
+    print("TOKEN => $token");
 
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer $token",
-        },
-      );
+    final response = await http.get(
+      Uri.parse(url),
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
 
-      /// ✅ PRINT RESPONSE DETAILS
-      print("========== ANALYTICS API RESPONSE ==========");
-      print("STATUS CODE => ${response.statusCode}");
-      print("BODY => ${response.body}");
+    /// ✅ PRINT RESPONSE DETAILS
+    print("========== ANALYTICS API RESPONSE ==========");
+    print("STATUS CODE => ${response.statusCode}");
+    print("BODY => ${response.body}");
 
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
 
-        /// DEBUG PARSED JSON
-        print("DECODED JSON => $decoded");
+      /// DEBUG PARSED JSON
+      print("DECODED JSON => $decoded");
 
-        final data = AnalyticsResponse.fromJson(decoded);
+      final data = AnalyticsResponse.fromJson(decoded);
 
-        analytics = data;
+      analytics = data;
 
-        /// ✅ SAFE DEBUG PRINTS
-        print("SUCCESS => ${analytics?.success}");
-        print(
-            "SUMMARY EXISTS => ${analytics?.data?.summary != null}");
+      /// ✅ SAFE DEBUG PRINTS
+      print("SUCCESS => ${analytics?.success}");
+      print("SUMMARY EXISTS => ${analytics?.data?.summary != null}");
 
-        print(
-            "COMPLETED ORDERS => ${analytics?.data?.summary.completedOrders}");
-      } else {
-        print("API ERROR => ${response.body}");
-        Get.snackbar("Error", "Failed to fetch analytics");
-      }
-    } catch (e, stack) {
-      print("========== ANALYTICS ERROR ==========");
-      print(e);
-      print(stack);
-      Get.snackbar("Error", e.toString());
-    } finally {
-      isLoading = false;
-      update();
+      print("COMPLETED ORDERS => ${analytics?.data?.summary.completedOrders}");
+    } else {
+      print("API ERROR => ${response.body}");
+      Get.snackbar("Error", "Failed to fetch analytics");
     }
+    //} catch (e, stack) {
+
+    // Get.snackbar("Error", e.toString());
+    // } finally {
+    isLoading = false;
+    update();
+    //   }
   }
 }

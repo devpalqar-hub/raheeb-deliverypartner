@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -43,9 +44,7 @@ class OrderController extends GetxController {
       filteredOrders = orders;
     } else {
       filteredOrders = orders.where((order) {
-        return order.orderNumber
-            .toLowerCase()
-            .contains(query.toLowerCase());
+        return order.orderNumber.toLowerCase().contains(query.toLowerCase());
       }).toList();
     }
     update();
@@ -86,8 +85,9 @@ class OrderController extends GetxController {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200 && data["success"] == true) {
-        deliveryPartners =
-            (data["data"] as List).map((e) => DeliveryPartnerModel.fromJson(e)).toList();
+        deliveryPartners = (data["data"] as List)
+            .map((e) => DeliveryPartnerModel.fromJson(e))
+            .toList();
         filteredPartners = deliveryPartners;
       } else {
         Get.snackbar("Error", "Failed to load partners");
@@ -101,7 +101,11 @@ class OrderController extends GetxController {
   }
 
   // ================= FETCH ORDERS WITH PAGINATION =================
-  Future<void> fetchMyOrders({String? orderId, int page = 1, int limit = 10}) async {
+  Future<void> fetchMyOrders({
+    String? orderId,
+    int page = 1,
+    int limit = 10,
+  }) async {
     try {
       if (page == 1) {
         isLoading = true;
@@ -111,7 +115,8 @@ class OrderController extends GetxController {
       final prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString("token");
 
-      String url = "$baseUrl/orders/delivery-partner/my-orders?page=$page&limit=$limit";
+      String url =
+          "$baseUrl/orders/delivery-partner/my-orders?page=$page&limit=$limit&pending=true";
       if (orderId != null && orderId.isNotEmpty) {
         url += "&orderId=$orderId";
       }
@@ -125,7 +130,7 @@ class OrderController extends GetxController {
       );
 
       final data = jsonDecode(response.body);
-
+      log(response.body);
       if (response.statusCode == 200 && data["success"] == true) {
         List<OrderModel> fetchedOrders = (data["data"]["data"] as List)
             .map((e) => OrderModel.fromJson(e))
@@ -257,7 +262,10 @@ class OrderController extends GetxController {
       String? token = prefs.getString("token");
 
       final url = "$baseUrl/orders/$orderId/assign-delivery-partner";
-      final body = jsonEncode({"deliveryPartnerId": deliveryPartnerId, "notes": notes});
+      final body = jsonEncode({
+        "deliveryPartnerId": deliveryPartnerId,
+        "notes": notes,
+      });
 
       final response = await http.patch(
         Uri.parse(url),
@@ -275,7 +283,10 @@ class OrderController extends GetxController {
         await fetchMyOrders(page: 1); // refresh orders list
         return true;
       } else {
-        Get.snackbar("Error", data["message"] ?? "Failed to assign delivery partner");
+        Get.snackbar(
+          "Error",
+          data["message"] ?? "Failed to assign delivery partner",
+        );
         return false;
       }
     } catch (e, stack) {
