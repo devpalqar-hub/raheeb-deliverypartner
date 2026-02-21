@@ -27,7 +27,7 @@ class _AdminWebViewScreenState extends State<AdminWebViewScreen> {
   int _progress = 0;
   bool _logoutHandled = false;
 
-  static const String baseUrl = "https://admin.ecom.palqar.cloud";
+  static const String baseUrl = "https://admin.raheeb.qa";
 
   String get initialUrl => "$baseUrl/mobile/${widget.accessToken}";
 

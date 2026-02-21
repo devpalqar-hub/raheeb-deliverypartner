@@ -34,31 +34,26 @@ class OrderCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
-
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style:  TextStyle(
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                 SizedBox(height: 4.h),
+                  // Text(
+                  //   title,
+                  //   style:  TextStyle(
+                  //     fontSize: 13.sp,
+                  //     fontWeight: FontWeight.bold,
+                  //   ),
+                  // ),
+                  SizedBox(height: 4.h),
                   Row(
                     children: [
                       Text(
@@ -69,43 +64,40 @@ class OrderCard extends StatelessWidget {
                         ),
                       ),
                       SizedBox(width: 50.w),
-                       Container(
-                padding:  EdgeInsets.symmetric(
-                  horizontal: 5.h,
-                  vertical: 6.h,
-                ),
-                height: 25.h,
-                //width: 15.w,
-                decoration: BoxDecoration(
-                  color: status == "ASSIGNED"
-                      ? Colors.blue.shade50
-                      : Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  status,
-                  style: TextStyle(
-                    color: status == "ASSIGNED"
-                        ? Colors.blue
-                        : Colors.orange,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 10.sp,
-                  ),
-                ),
-              ),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 5.h,
+                          vertical: 6.h,
+                        ),
+                        height: 25.h,
+                        //width: 15.w,
+                        decoration: BoxDecoration(
+                          color: status == "ASSIGNED"
+                              ? Colors.blue.shade50
+                              : Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          status,
+                          style: TextStyle(
+                            color: status == "ASSIGNED"
+                                ? Colors.blue
+                                : Colors.orange,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10.sp,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ],
               ),
-             
-             
             ],
           ),
 
-           SizedBox(height: 16),
+          SizedBox(height: 16),
 
-
-           Text(
+          Text(
             "PICK UP",
             style: TextStyle(
               fontSize: 11,
@@ -118,7 +110,6 @@ class OrderCard extends StatelessWidget {
 
           const SizedBox(height: 12),
 
-
           const Text(
             "DELIVER TO",
             style: TextStyle(
@@ -130,54 +121,49 @@ class OrderCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(delivery),
 
-          
+          const SizedBox(height: 16),
 
-      const SizedBox(height: 16),
+          const Divider(),
 
-      const Divider(),
+          const SizedBox(height: 12),
 
-      const SizedBox(height: 12),
-
-      Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                "Est. Earning",
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Est. Earning",
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    earning,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                earning,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xff2F80ED),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.r),
+                  ),
                 ),
+                onPressed: onPressed,
+                child: Text(buttonText, style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
-
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor:  const Color(0xff2F80ED),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 12,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.r),
-              ),
-            ),
-            onPressed: onPressed,
-            child: Text(buttonText,style: TextStyle(color: Colors.white),),
-          ),
-        ],
-      ),
         ],
       ),
     );

@@ -1,7 +1,7 @@
 class OrderModel {
   final String id;
   final String orderNumber;
- String status;
+  String status;
   final String paymentStatus;
   final String paymentMethod;
   final String totalAmount;
@@ -47,8 +47,12 @@ class OrderModel {
       taxAmount: json["taxAmount"] ?? "0",
       discountAmount: json["discountAmount"] ?? "0",
       notes: json["notes"],
-      createdAt: DateTime.parse(json["createdAt"] ?? DateTime.now().toIso8601String()),
-      updatedAt: DateTime.parse(json["updatedAt"] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+        json["createdAt"] ?? DateTime.now().toIso8601String(),
+      ),
+      updatedAt: DateTime.parse(
+        json["updatedAt"] ?? DateTime.now().toIso8601String(),
+      ),
       customerProfile: CustomerProfile.fromJson(json["CustomerProfile"] ?? {}),
       shippingAddress: ShippingAddress.fromJson(json["shippingAddress"] ?? {}),
       tracking: Tracking.fromJson(json["tracking"] ?? {}),
@@ -59,10 +63,7 @@ class OrderModel {
   }
 
   // ---------------- COPY WITH ----------------
-  OrderModel copyWith({
-    Tracking? tracking,
-    String? status,
-  }) {
+  OrderModel copyWith({Tracking? tracking, String? status}) {
     return OrderModel(
       id: id,
       orderNumber: orderNumber,
@@ -89,11 +90,7 @@ class CustomerProfile {
   final String name;
   final String phone;
 
-  CustomerProfile({
-    required this.id,
-    required this.name,
-    required this.phone,
-  });
+  CustomerProfile({required this.id, required this.name, required this.phone});
 
   factory CustomerProfile.fromJson(Map<String, dynamic> json) {
     return CustomerProfile(
@@ -148,8 +145,12 @@ class ShippingAddress {
       country: json["country"] ?? "",
       phone: json["phone"],
       isDefault: json["isDefault"] ?? false,
-      createdAt: DateTime.parse(json["createdAt"] ?? DateTime.now().toIso8601String()),
-      updatedAt: DateTime.parse(json["updatedAt"] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+        json["createdAt"] ?? DateTime.now().toIso8601String(),
+      ),
+      updatedAt: DateTime.parse(
+        json["updatedAt"] ?? DateTime.now().toIso8601String(),
+      ),
     );
   }
 }
@@ -160,8 +161,8 @@ class Tracking {
   final String carrier;
   final String trackingNumber;
   final String? trackingUrl;
-  final String status;
-  final dynamic statusHistory;
+  String status;
+  // final dynamic statusHistory;
   final DateTime lastUpdatedAt;
 
   Tracking({
@@ -171,7 +172,7 @@ class Tracking {
     required this.trackingNumber,
     this.trackingUrl,
     required this.status,
-    this.statusHistory,
+    //  this.statusHistory,
     required this.lastUpdatedAt,
   });
 
@@ -183,16 +184,15 @@ class Tracking {
       trackingNumber: json["trackingNumber"] ?? "",
       trackingUrl: json["trackingUrl"],
       status: json["status"] ?? "",
-      statusHistory: json["statusHistory"],
-      lastUpdatedAt: DateTime.parse(json["lastUpdatedAt"] ?? DateTime.now().toIso8601String()),
+      // statusHistory: json["statusHistory"],
+      lastUpdatedAt: DateTime.parse(
+        json["lastUpdatedAt"] ?? DateTime.now().toIso8601String(),
+      ),
     );
   }
 
   // ---------------- COPY WITH ----------------
-  Tracking copyWith({
-    String? status,
-    DateTime? lastUpdatedAt,
-  }) {
+  Tracking copyWith({String? status, DateTime? lastUpdatedAt}) {
     return Tracking(
       id: id,
       orderId: orderId,
@@ -200,7 +200,7 @@ class Tracking {
       trackingNumber: trackingNumber,
       trackingUrl: trackingUrl,
       status: status ?? this.status,
-      statusHistory: statusHistory,
+      //   statusHistory: statusHistory,
       lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt,
     );
   }
@@ -234,11 +234,7 @@ class Product {
   final String name;
   final List<dynamic> images;
 
-  Product({
-    required this.id,
-    required this.name,
-    required this.images,
-  });
+  Product({required this.id, required this.name, required this.images});
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(

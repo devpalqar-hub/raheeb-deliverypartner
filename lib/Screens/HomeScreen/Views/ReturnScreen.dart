@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:raheeb_deliverypartner/Screens/HomeScreen/Service/DeliveryController.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:raheeb_deliverypartner/Screens/HomeScreen/Model/ReturnOrderModel.dart';
 import 'package:raheeb_deliverypartner/Screens/HomeScreen/Service/ReturnOrderController.dart';
@@ -15,7 +16,7 @@ class ProcessReturnScreen extends StatefulWidget {
 }
 
 class _ProcessReturnScreenState extends State<ProcessReturnScreen> {
-  final ReturnOrderController controller = Get.find<ReturnOrderController>();
+  // final ReturnOrderController controller = Get.find<ReturnOrderController>();
 
   late ReturnOrder _currentReturnOrder;
   late String currentStatus;
@@ -31,6 +32,8 @@ class _ProcessReturnScreenState extends State<ProcessReturnScreen> {
     final status = currentStatus.toLowerCase();
     return status == "pending" || status == "approved";
   }
+
+  deliveryController controller = Get.find();
 
   // -------------------- PHONE CALL --------------------
   void _callCustomer(String phone) async {
@@ -60,8 +63,8 @@ class _ProcessReturnScreenState extends State<ProcessReturnScreen> {
   void _showStatusUpdateSheet() {
     if (Get.isBottomSheetOpen ?? false) return;
 
-    String? selectedStatus; 
-    String? selectedMethod; 
+    String? selectedStatus;
+    String? selectedMethod;
     final TextEditingController reasonController = TextEditingController();
 
     Get.bottomSheet(
@@ -78,11 +81,7 @@ class _ProcessReturnScreenState extends State<ProcessReturnScreen> {
             canSubmit = true;
           }
 
-          return Padding(
-            // Handles keyboard padding so it doesn't cover the textfield
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
-            ),
+          return SafeArea(
             child: Container(
               padding: EdgeInsets.all(20.w),
               decoration: BoxDecoration(
@@ -238,14 +237,10 @@ class _ProcessReturnScreenState extends State<ProcessReturnScreen> {
                         onPressed: !canSubmit
                             ? null
                             : () async {
-                                controller.isLoading = true;
+                                controller.returnLoading = true;
                                 controller.update();
                                 Get.back(); // Close bottom sheet
-                                await Future.delayed(
-                                  const Duration(milliseconds: 300),
-                                ); // Smooth transition
 
-                                // Pass "none" for payment method if rejected to satisfy API requirements
                                 String paymentMethodToPass =
                                     selectedStatus == 'refunded'
                                     ? selectedMethod!
@@ -259,7 +254,7 @@ class _ProcessReturnScreenState extends State<ProcessReturnScreen> {
                                       adminNotes: reasonController.text.trim(),
                                     );
 
-                                controller.isLoading = false;
+                                controller.returnLoading = false;
                                 controller.update();
 
                                 if (!mounted) return;
@@ -368,46 +363,48 @@ class _ProcessReturnScreenState extends State<ProcessReturnScreen> {
       backgroundColor: Colors.white,
       // Only show the bottom navigation bar if the status is pending or approved
       bottomNavigationBar: isPendingOrApproved
-          ? Container(
-              padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 22.h),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x14000000),
-                    blurRadius: 10,
-                    offset: Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: SizedBox(
-                height: 56.h,
-                child: GetBuilder<ReturnOrderController>(
-                  builder: (ctrl) => ElevatedButton(
-                    onPressed: ctrl.isLoading ? null : _showStatusUpdateSheet,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xff1E5CC6),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14.r),
-                      ),
+          ? SafeArea(
+              child: Container(
+                padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 22.h),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0x14000000),
+                      blurRadius: 10,
+                      offset: Offset(0, -2),
                     ),
-                    child: ctrl.isLoading
-                        ? SizedBox(
-                            height: 22.h,
-                            width: 22.h,
-                            child: const CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
+                  ],
+                ),
+                child: SizedBox(
+                  height: 56.h,
+                  child: GetBuilder<ReturnOrderController>(
+                    builder: (ctrl) => ElevatedButton(
+                      onPressed: ctrl.isLoading ? null : _showStatusUpdateSheet,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xff1E5CC6),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14.r),
+                        ),
+                      ),
+                      child: ctrl.isLoading
+                          ? SizedBox(
+                              height: 22.h,
+                              width: 22.h,
+                              child: const CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Text(
+                              "Update Status →",
+                              style: TextStyle(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
                             ),
-                          )
-                        : Text(
-                            "Update Status →",
-                            style: TextStyle(
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
+                    ),
                   ),
                 ),
               ),

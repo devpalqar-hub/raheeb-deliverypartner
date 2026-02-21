@@ -19,29 +19,29 @@ class ReturnOrderCard extends StatelessWidget {
     return initials.toUpperCase();
   }
 
- 
-
-/// Launch phone dialer
-void _callCustomer(String phone) async {
-  final uri = Uri(scheme: 'tel', path: phone);
-  if (await canLaunchUrl(uri)) {
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  } else {
-    debugPrint("Could not launch dialer for $phone");
+  /// Launch phone dialer
+  void _callCustomer(String phone) async {
+    final uri = Uri(scheme: 'tel', path: phone);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      debugPrint("Could not launch dialer for $phone");
+    }
   }
-}
 
-/// Open Google Maps
-void _openMap(String address) async {
-  final query = Uri.encodeComponent(address);
-  final googleMapsUrl = Uri.parse(
-      "https://www.google.com/maps/dir/?api=1&destination=$query");
-  if (await canLaunchUrl(googleMapsUrl)) {
-    await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
-  } else {
-    debugPrint("Could not open map for $address");
+  /// Open Google Maps
+  void _openMap(String address) async {
+    final query = Uri.encodeComponent(address);
+    final googleMapsUrl = Uri.parse(
+      "https://www.google.com/maps/dir/?api=1&destination=$query",
+    );
+    if (await canLaunchUrl(googleMapsUrl)) {
+      await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
+    } else {
+      debugPrint("Could not open map for $address");
+    }
   }
-}
+
   @override
   Widget build(BuildContext context) {
     final bool isFullReturn = returnOrder.returnType.toLowerCase() == "full";
@@ -75,7 +75,7 @@ void _openMap(String address) async {
             color: Colors.black12,
             blurRadius: 10.r,
             offset: const Offset(0, 4),
-          )
+          ),
         ],
       ),
       child: Row(
@@ -85,7 +85,9 @@ void _openMap(String address) async {
             width: 6.w,
             height: 210.h,
             decoration: BoxDecoration(
-              color: isFullReturn ? const Color(0xffF2994A) : const Color(0xff9B51E0),
+              color: isFullReturn
+                  ? const Color(0xffF2994A)
+                  : const Color(0xff9B51E0),
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(18.r),
                 bottomLeft: Radius.circular(18.r),
@@ -105,7 +107,9 @@ void _openMap(String address) async {
                     children: [
                       _badge(
                         isFullReturn ? "Full Order Return" : "Partial Return",
-                        isFullReturn ? const Color(0xffF2994A) : const Color(0xff9B51E0),
+                        isFullReturn
+                            ? const Color(0xffF2994A)
+                            : const Color(0xff9B51E0),
                       ),
                       _badge(
                         "Status: ${returnOrder.status}",
@@ -126,9 +130,10 @@ void _openMap(String address) async {
                         child: Text(
                           getInitials(returnOrder.customerProfile.name),
                           style: TextStyle(
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue),
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
+                          ),
                         ),
                       ),
                       SizedBox(width: 12.w),
@@ -146,7 +151,9 @@ void _openMap(String address) async {
                             ),
                             SizedBox(height: 2.h),
                             GestureDetector(
-                              onTap: () => _callCustomer(returnOrder.customerProfile.phone),
+                              onTap: () => _callCustomer(
+                                returnOrder.customerProfile.phone,
+                              ),
                               child: Text(
                                 returnOrder.customerProfile.phone,
                                 style: TextStyle(
@@ -169,14 +176,19 @@ void _openMap(String address) async {
                       ),
 
                       /// CALL ICON
-                      GestureDetector( 
-                        onTap: () => _callCustomer(returnOrder.customerProfile.phone),
+                      GestureDetector(
+                        onTap: () =>
+                            _callCustomer(returnOrder.customerProfile.phone),
                         child: CircleAvatar(
                           radius: 18.r,
                           backgroundColor: Colors.blue.withOpacity(.1),
-                          child: Icon(Icons.call, color: Colors.blue, size: 18.sp),
+                          child: Icon(
+                            Icons.call,
+                            color: Colors.blue,
+                            size: 18.sp,
+                          ),
                         ),
-                      )
+                      ),
                     ],
                   ),
 
@@ -191,25 +203,33 @@ void _openMap(String address) async {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.location_on_outlined, color: Colors.grey, size: 20.sp),
+                        Icon(
+                          Icons.location_on_outlined,
+                          color: Colors.grey,
+                          size: 20.sp,
+                        ),
                         SizedBox(width: 10.w),
                         Expanded(
-                         child: Text(
-  shipping != null
-    ? "${shipping.address}, ${shipping.city}, ${shipping.state} ${shipping.postalCode}"
-    : "No address available",
-  style: TextStyle(
-    fontSize: 14.sp,
-    color: Colors.black,
-  ),
-),
+                          child: Text(
+                            shipping != null
+                                ? "${shipping.address}, ${shipping.city}, ${shipping.state} ${shipping.postalCode}"
+                                : "No address available",
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              color: Colors.black,
+                            ),
+                          ),
                         ),
                         if (isFullReturn)
                           GestureDetector(
                             onTap: () => _openMap(
-                                 "${shipping?.address ?? ''}, ${shipping?.city ?? ''}, ${shipping?.state ?? ''} ${shipping?.postalCode ?? ''}",),
+                              "${shipping?.address ?? ''}, ${shipping?.city ?? ''}, ${shipping?.state ?? ''} ${shipping?.postalCode ?? ''}",
+                            ),
                             child: Container(
-                              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 12.w,
+                                vertical: 6.h,
+                              ),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(8.r),
                                 border: Border.all(color: Colors.blue),
@@ -223,7 +243,7 @@ void _openMap(String address) async {
                                 ),
                               ),
                             ),
-                          )
+                          ),
                       ],
                     ),
                   ),
@@ -239,11 +259,16 @@ void _openMap(String address) async {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (_) =>
-                                  ProcessReturnScreen(returnOrder: returnOrder)),
+                            builder: (_) =>
+                                ProcessReturnScreen(returnOrder: returnOrder),
+                          ),
                         );
                       },
-                      icon: Icon(Icons.local_shipping, size: 18.sp, color: Colors.white),
+                      icon: Icon(
+                        Icons.local_shipping,
+                        size: 18.sp,
+                        color: Colors.white,
+                      ),
                       label: Text(
                         "Start Return Pick-up",
                         style: TextStyle(fontSize: 15.sp, color: Colors.white),
@@ -255,7 +280,7 @@ void _openMap(String address) async {
                         ),
                       ),
                     ),
-                  )
+                  ),
                 ],
               ),
             ),
