@@ -8,7 +8,9 @@ import 'package:raheeb_deliverypartner/Screens/HomeScreen/Model/OrderModel.dart'
 import 'package:raheeb_deliverypartner/Screens/HomeScreen/Model/ReturnOrderModel.dart';
 import 'package:raheeb_deliverypartner/Screens/LoginScreen/Service/LoginController.dart';
 
-String baseUrl = "https://api.raheeb.qa/v1";
+String baseUrl = (false)
+? "https://api.raheeb.qa/v1"
+: "https://api.ecom.palqar.cloud/v1";
 
 class deliveryController extends GetxController {
   List<ReturnOrder> pendingReturns = [];

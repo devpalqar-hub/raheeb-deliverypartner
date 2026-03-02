@@ -53,6 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
+        toolbarHeight: 50.h,
         backgroundColor: Colors.white,
         title: Row(
           children: [
@@ -101,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Icon(
               Icons.change_circle,
               color: Colors.blue.withOpacity(.7),
-              size: 32,
+              size: 24.sp,
             ),
           ),
           SizedBox(width: 10),
